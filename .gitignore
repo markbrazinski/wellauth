@@ -1,0 +1,87 @@
+# --- secrets / credentials -------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+credentials/
+service-account*.json
+*-service-account.json
+gha-creds-*.json
+application_default_credentials.json
+.gcloud/
+.aws/
+.netrc
+
+# --- dependencies ----------------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/versions
+
+# --- build output ----------------------------------------------------------
+dist/
+dist-ssr/
+build/
+out/
+.vite/
+*.tsbuildinfo
+
+# --- test / coverage -------------------------------------------------------
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# --- logs ------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- local emulator / runtime state ----------------------------------------
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+.emulator/
+*.local
+.cache/
+.temp/
+.tmp/
+
+# --- IDE / editor ----------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.history/
+
+# --- OS --------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
