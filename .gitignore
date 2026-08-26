@@ -85,3 +85,6 @@ firestore-debug.log*
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# --- agent / assistant context --------------------------------------------
+CLAUDE.md
