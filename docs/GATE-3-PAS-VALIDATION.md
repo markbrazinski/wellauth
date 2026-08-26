@@ -20,7 +20,7 @@ the artifact. They do not depend on the validator running.
 | `resource` | `["Claim"]` | Claim ✅ |
 | `type` (type-level operation) | `true` | type-level, not instance ✅ |
 | input parameter type | `Bundle` | Bundle ✅ |
-| output parameter type | `Bundle` | ⚠️ returns bare `ClaimResponse` — see §3 |
+| output parameter type | `Bundle` | PAS response Bundle ✅ |
 
 ### Request bundle — `profile-pas-request-bundle`
 
@@ -29,6 +29,15 @@ the artifact. They do not depend on the validator running.
 | `Bundle.type` | pattern `collection` | `collection` ✅ |
 | `Bundle.entry` | min 1 | 10 entries ✅ |
 | first entry | Claim | Claim ✅ |
+
+### Response bundle — `profile-pas-response-bundle`
+
+| Constraint | Required | WellAuth |
+|---|---|---|
+| `Bundle.type` | fixed `collection` | `collection` ✅ |
+| `Bundle.identifier` | min 1 | receipt id ✅ |
+| `Bundle.timestamp` | min 1 | received-at instant ✅ |
+| `ClaimResponse` slice | min 1, max 1 | first entry ✅ |
 
 ### Claim — `profile-claim`, all 11 required (min ≥ 1) top-level elements
 
@@ -42,9 +51,9 @@ Fixed/pattern values both satisfied:
 | `Claim.status` | `active` | `active` ✅ |
 | `Claim.use` | `preauthorization` | `preauthorization` ✅ |
 
-**Result: the artifact satisfies the cardinality and fixed-value constraints of
-the PAS 2.2.1 Claim and request-bundle profiles, checked against the official
-package.**
+**Result: the exchange satisfies the cardinality and fixed-value constraints of
+the PAS 2.2.1 Claim, request-bundle and response-bundle profiles, checked
+against the official package.**
 
 ## 2. Full IG validation — NOT COMPLETED
 
@@ -82,33 +91,38 @@ versions. Registry fan-out is the leading hypothesis.
 Environment: OpenJDK 26.0.2.1 (very new — not an LTS the validator is
 routinely tested on), `validator_cli.jar` `latest`, macOS arm64.
 
-Full write-up and open research questions: `docs/gate3/VALIDATOR-CHALLENGE.md`.
+Full write-up and diagnosis: `docs/gate3/VALIDATOR-CHALLENGE.md`.
+
+**This is closed, not pending.** No further effort will be spent making the
+full IG validator complete. The demonstrated exchange is permanently
+documented as **PAS-shaped, not PAS-validated**. Structural conformance to the
+named profiles is established from the official package (§1) and is enforced
+by the Gate 3 suite, so a future regression in shape would be caught even
+though full IG validation never ran.
 
 ## 3. Known deviations — stated, not hidden
 
-1. **Response shape.** PAS defines `Claim/$submit` as returning a `Bundle`
-   (a PAS response bundle containing a `ClaimResponse`). The simulator returns
-   a bare `ClaimResponse`. The provider persists the payer decision correctly
-   either way, but this is **not** PAS response-bundle conformant.
-2. **No PAS extensions.** The artifact does not carry
+1. **No PAS extensions.** The artifact does not carry
    `extension-requestedService`, `extension-itemRequestedServiceDate`,
    `extension-serviceItemRequestType` or the PAS `identifier` slicing. Adding
    them without validator feedback would be guesswork dressed as conformance.
-3. **Profile assertions not run.** `meta.profile` is not stamped on the Bundle
+2. **Profile assertions not run.** `meta.profile` is not stamped on the Bundle
    or Claim, precisely because full profile validation has not passed. Claiming
    a profile the artifact has not been validated against would be the wrong
    direction of error.
-4. **Terminology not verified.** No code-system membership or value-set binding
+3. **Terminology not verified.** No code-system membership or value-set binding
    was checked, in either run.
 
 ## 4. The claim WellAuth is entitled to make
 
-> **PAS-shaped FHIR R4 prior-authorization request.** The outgoing artifact is
+> **PAS-shaped FHIR R4 prior-authorization exchange.** The outgoing artifact is
 > a `collection` Bundle whose first entry is a `Claim` with
 > `use = preauthorization`, transmitted to `Claim/$submit` — the operation the
-> official PAS 2.2.1 package defines for this purpose. It satisfies the
-> cardinality and fixed-value constraints of the PAS 2.2.1 `profile-claim` and
-> `profile-pas-request-bundle`, verified against the official package.
+> official PAS 2.2.1 package defines for this purpose — and the payer replies
+> with a PAS-shaped response Bundle carrying the `ClaimResponse`. The exchange
+> satisfies the cardinality and fixed-value constraints of the PAS 2.2.1
+> `profile-claim`, `profile-pas-request-bundle` and
+> `profile-pas-response-bundle`, verified against the official package.
 
 WellAuth does **NOT** claim:
 
@@ -117,6 +131,8 @@ WellAuth does **NOT** claim:
 - trading-partner, X12 278 or clearinghouse conformance;
 - terminology or value-set conformance.
 
-**Gate 3 P0.19 verdict: PASS WITH LIMITATIONS.** Structural conformance to the
-named profiles is established from the official package; full IG validation is
-unresolved and is the one open item in Gate 3.
+**Gate 3 P0.19 verdict: PASS WITH LIMITATIONS — closed.** Structural
+conformance to the named profiles is established from the official package and
+enforced by the suite. Full IG validation did not complete and will not be
+pursued further; the exchange is documented permanently as **PAS-shaped, not
+PAS-validated**. This is a deliberate, bounded limitation, not an open task.

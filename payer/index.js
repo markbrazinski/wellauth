@@ -19,10 +19,10 @@ import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import {
   MODES,
-  claimResponseFor,
   findByIdentifier,
   receiptFor,
   recordSubmission,
+  responseBundleFor,
 } from './store.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
@@ -229,13 +229,16 @@ const server = createServer(async (req, res) => {
     return req.socket.destroy()
   }
 
-  const response = claimResponseFor(record)
+  // PAS defines Claim/$submit as returning a Bundle, so the ClaimResponse is
+  // delivered inside a PAS-shaped response bundle rather than bare.
+  const responseBundle = responseBundleFor(record)
   // HTTP 200 means "received and processed", never "authorized". The
-  // authorization decision lives in ClaimResponse.outcome/disposition.
+  // authorization decision lives in ClaimResponse.outcome/disposition, one
+  // level down inside the bundle.
   return send(res, duplicate ? 200 : 201, {
-    ...response,
-    ...(duplicate ? { meta: { ...(response.meta ?? {}), tag: [
-      ...(response.meta?.tag ?? []),
+    ...responseBundle,
+    ...(duplicate ? { meta: { ...(responseBundle.meta ?? {}), tag: [
+      ...(responseBundle.meta?.tag ?? []),
       { system: 'urn:wellauth:payer-sim', code: 'duplicate-of-prior-submission' },
     ] } } : {}),
   }, correlationId)

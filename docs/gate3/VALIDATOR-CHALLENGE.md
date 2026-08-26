@@ -1,8 +1,14 @@
-# Open problem — HL7 FHIR validator will not complete against Da Vinci PAS 2.2.1
+# CLOSED — HL7 FHIR validator will not complete against Da Vinci PAS 2.2.1
 
-Everything else in Gate 3 is finished and green. This is the **single** open
-item. We need a real validation verdict on one 8 KB FHIR Bundle, and the
-official validator has not produced one in ~25 minutes of wall time.
+> **Status: closed, will not pursue.** Retained as a diagnosis record. WellAuth
+> permanently documents the demonstrated exchange as **PAS-shaped, not
+> PAS-validated**, and enforces structural conformance against the official
+> PAS 2.2.1 package instead (see `docs/GATE-3-PAS-VALIDATION.md`). The notes
+> below remain accurate should anyone wish to revisit the validator itself.
+
+Gate 3 is finished and green. This document records why a full IG validation
+verdict was never obtained for one 8 KB FHIR Bundle, despite ~60 minutes of
+wall time across two runs.
 
 ## What we are trying to do
 
@@ -137,5 +143,5 @@ did not verify.
   P0.19 (Claim first, `use=preauthorization`, stable identifier, patient /
   insurer / coverage / provider references, ordered service unchanged) and by
   P0.18 (minimum-necessary, no decoys, all references resolve).
-- Whether Gate 3 otherwise passes — it does: 175/175 in-process, 176/176
+- Whether Gate 3 otherwise passes — it does: 188/188 in-process, 189/189
   deployed, Gate 0/1/2 unregressed.

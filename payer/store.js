@@ -130,6 +130,38 @@ export function receiptFor(record) {
 export const claimResponseFor = (record) => record.response ?? buildResponse(record)
 
 /**
+ * PAS response bundle -- what Claim/$submit actually returns.
+ *
+ * The official PAS 2.2.1 OperationDefinition declares Claim/$submit as
+ * returning a Bundle, and profile-pas-response-bundle requires
+ * Bundle.type=collection, a Bundle.identifier, a Bundle.timestamp, and a
+ * sliced first entry whose resource is the ClaimResponse (min=1, max=1).
+ *
+ * The stored record still holds the bare ClaimResponse: that is the payer's
+ * decision, and wrapping is a transport concern. Keeping the two separate
+ * means reconciliation and duplicate detection are untouched by this shape.
+ */
+export function responseBundleFor(record) {
+  const claimResponse = claimResponseFor(record)
+  return {
+    resourceType: 'Bundle',
+    // Required by the profile, and it doubles as the join key back to the
+    // provider's own submission -- the receipt id identifies this exchange.
+    identifier: { system: 'urn:wellauth:northstar:receipt', value: record.receiptId },
+    type: 'collection',
+    timestamp: record.receivedAt,
+    meta: {
+      tag: [{
+        system: 'urn:wellauth:payer-sim',
+        code: 'simulated',
+        display: 'SIMULATED PAYER -- Northstar Health Plan (fictional)',
+      }],
+    },
+    entry: [{ resource: claimResponse }],
+  }
+}
+
+/**
  * Deterministic synthetic ClaimResponse.
  *
  * `outcome` and `disposition` carry the authorization decision. Transport

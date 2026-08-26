@@ -100,6 +100,20 @@ If the payer definitively holds no record, the submission becomes `FAILED`
 with `CONFIRMED_NOT_RECEIVED` — the only safe recovery, and safe precisely
 because it is confirmed rather than assumed.
 
+## Response shape
+
+PAS 2.2.1 defines `Claim/$submit` as returning a **Bundle**, so the simulator
+replies with a PAS-shaped response Bundle — `type: collection`, a required
+`identifier` (the receipt id) and `timestamp`, and a sliced first entry
+carrying the `ClaimResponse`. The provider unwraps it via
+`extractClaimResponse()`, which also still accepts a bare `ClaimResponse` so
+that receipts persisted before this change, and any simpler payer, keep
+working. Anything it cannot unwrap is treated as ambiguous, never as success.
+
+The payer's stored record keeps the bare `ClaimResponse`: that is the
+decision, and the Bundle is transport packaging. Keeping them separate means
+duplicate detection and reconciliation are unaffected by wire shape.
+
 ## HTTP success ≠ authorization
 
 `interpretClaimResponse` derives the decision **only** from
@@ -135,14 +149,14 @@ resolves inside the bundle.
 | Destination | Northstar Health Plan (**simulated**) |
 | Transport | `POST /Claim/$submit`, Cloud Run ID token |
 | Attempts | 1 |
-| PAS validation | PASS WITH LIMITATIONS — see `GATE-3-PAS-VALIDATION.md` |
+| PAS validation | PAS-shaped, **not** PAS-validated — see `GATE-3-PAS-VALIDATION.md` |
 
 ### Payer response
 
 | Field | Value |
 |---|---|
 | Receipt id | `NS-RCPT-d76ac637-b832-4573-81b5-76b1a69047f7` |
-| Response resource | `ClaimResponse` (FHIR R4) |
+| Response resource | PAS response `Bundle` containing a `ClaimResponse` (FHIR R4) |
 | Outcome / status | `complete` → `approved` (**simulator decision**) |
 | Payer reference | `NS-AUTH-FEE74F7DDB78` |
 | Disposition | "Prior authorization approved by simulated payer" |
@@ -161,8 +175,8 @@ always carries `simulated: true` with an explicit simulation notice.
 
 | Resource | Value |
 |---|---|
-| Provider | `wellauth-provider`, revision `wellauth-provider-00007-9wx`, `--no-allow-unauthenticated` |
-| Payer simulator | `wellauth-payer-simulator`, revision `wellauth-payer-simulator-00003-chk`, `--no-allow-unauthenticated` |
+| Provider | `wellauth-provider`, revision `wellauth-provider-00008-zs9`, `--no-allow-unauthenticated` |
+| Payer simulator | `wellauth-payer-simulator`, revision `wellauth-payer-simulator-00004-q7w`, `--no-allow-unauthenticated` |
 | Provider SA | `wellauth-provider-sa` — `healthcare.fhirResourceReader` (read-only), `datastore.user` conditioned to `wellauth-workflow` |
 | Payer SA | `wellauth-payer-sa` — `datastore.user` conditioned to `wellauth-payer`. **No Healthcare API access of any kind.** |
 | Provider → payer | `roles/run.invoker` on the simulator only |
@@ -200,9 +214,9 @@ route, outcome, receipt id and mode. The payer never logs the claim or bundle.
 npm test                                                      # Gate 0   46/46
 npm run test:fhir-smoke                                       # Gate 1   93/93
 npm run test:gate2                                            # Gate 2  147/147
-PAYER_BASE_URL=<payer> npm run test:gate3                     # Gate 3  182/182
+PAYER_BASE_URL=<payer> npm run test:gate3                     # Gate 3  188/188
 GATE3_BASE_URL=<provider> PAYER_BASE_URL=<payer> \
-  npm run test:gate3                                          # Gate 3  183/183
+  npm run test:gate3                                          # Gate 3  189/189
 ```
 
 The deployed run adds one check (query-string injection against the bounded
@@ -219,8 +233,11 @@ prior authorization, X12 278, clearinghouse integration, trading-partner
 conformance, HIPAA compliance, or production readiness. The payer is a
 simulator and every artifact it produces is tagged `simulated`.
 
-PAS conformance is claimed only to the extent the validator output supports —
-see `GATE-3-PAS-VALIDATION.md`.
+The exchange is **PAS-shaped, not PAS-validated**. Structural conformance to
+the PAS 2.2.1 `profile-claim`, `profile-pas-request-bundle` and
+`profile-pas-response-bundle` is verified against the official HL7 package and
+enforced by the suite; full IG validation never completed and is closed rather
+than pending. See `GATE-3-PAS-VALIDATION.md`.
 
 ## Cleanup
 

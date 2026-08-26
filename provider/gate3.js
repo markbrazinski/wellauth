@@ -349,6 +349,13 @@ const a1 = await freshApproved()
 const before1 = await payerLedger()
 check('P0.1 payer holds nothing before submission', before1.deliveries === 0,
   String(before1.deliveries))
+// Compile the same artifact independently so the wire-shape assertions below
+// can re-post it without depending on provider internals.
+const d1 = (await workflowRef(W).get()).data()
+const m1 = (await workflowRef(W).collection('manifests')
+  .doc(String(d1.manifestRevision)).get()).data()
+const { sources: src1 } = await readFrozenSources(m1)
+const compiledForWire = compilePasBundle({ manifest: m1, sources: src1, workflowId: W })
 const sub1 = await api.submit({ expectedRevision: a1.state.revision })
 check('P0.1 submit succeeded', sub1.ok, `${sub1.code ?? ''} ${sub1.message ?? ''}`)
 check('P0.1 submission reports transmitted', sub1.value?.transmitted === true)
@@ -375,6 +382,31 @@ check('P0.1 payer request hash matches the provider request hash',
   `${rec1?.requestHash} vs ${sub1.value?.submission?.requestHash}`)
 check('P0.1 payer response is a ClaimResponse',
   rec1?.response?.resourceType === 'ClaimResponse', String(rec1?.response?.resourceType))
+// PAS defines Claim/$submit as returning a Bundle. Assert the wire shape
+// directly rather than trusting the provider's already-unwrapped projection.
+const wireRes = await fetch(`${PAYER_URL}/Claim/$submit`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${await payerAuth()}`,
+    'Content-Type': 'application/fhir+json',
+  },
+  body: JSON.stringify(compiledForWire.bundle),
+})
+const wireBody = await wireRes.json()
+check('P0.1 Claim/$submit returns a Bundle, not a bare ClaimResponse',
+  wireBody?.resourceType === 'Bundle', String(wireBody?.resourceType))
+check('P0.1 response Bundle.type is collection (PAS response-bundle profile)',
+  wireBody?.type === 'collection', String(wireBody?.type))
+check('P0.1 response Bundle carries a required identifier',
+  Boolean(wireBody?.identifier?.value))
+check('P0.1 response Bundle carries a required timestamp',
+  Boolean(wireBody?.timestamp))
+check('P0.1 first response entry is the ClaimResponse',
+  wireBody?.entry?.[0]?.resource?.resourceType === 'ClaimResponse',
+  String(wireBody?.entry?.[0]?.resource?.resourceType))
+check('P0.1 the decision survives unwrapping the bundle',
+  wireBody?.entry?.[0]?.resource?.outcome === 'complete',
+  String(wireBody?.entry?.[0]?.resource?.outcome))
 check('P0.1 the response crossed a DISTINCT service origin',
   PAYER_URL !== (BASE_URL ?? '') && /payer-simulator/.test(PAYER_URL))
 

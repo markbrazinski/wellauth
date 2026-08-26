@@ -175,15 +175,40 @@ async function transmit({ bundle, mode, correlationId }) {
     }
     return { classification: 'unknown', reason: 'server-error', status: res.status }
   }
-  if (body?.resourceType !== 'ClaimResponse') {
+  // PAS returns a response Bundle wrapping the ClaimResponse. Unwrap to the
+  // decision resource; anything we cannot unwrap tells us nothing about
+  // acceptance and must stay ambiguous rather than be optimistically accepted.
+  const claimResponse = extractClaimResponse(body)
+  if (!claimResponse) {
     return { classification: 'unknown', reason: 'unexpected-response-shape', status: res.status }
   }
-  return { classification: 'accepted', status: res.status, body }
+  return { classification: 'accepted', status: res.status, body: claimResponse, envelope: body }
 }
 
 // ---------------------------------------------------------------------------
 // Payer response interpretation.
 // ---------------------------------------------------------------------------
+
+/**
+ * Unwraps the payer's decision from a PAS response Bundle.
+ *
+ * PAS 2.2.1 defines Claim/$submit as returning a Bundle whose sliced first
+ * entry is the ClaimResponse. A bare ClaimResponse is still accepted so that
+ * persisted receipts from before the bundle change, and any simpler payer,
+ * keep working. Returns null when no ClaimResponse can be found -- the caller
+ * must treat that as ambiguous, never as success.
+ */
+export function extractClaimResponse(body) {
+  if (!body || typeof body !== 'object') return null
+  if (body.resourceType === 'ClaimResponse') return body
+  if (body.resourceType === 'Bundle') {
+    const hit = (body.entry ?? [])
+      .map((e) => e?.resource)
+      .find((r) => r?.resourceType === 'ClaimResponse')
+    return hit ?? null
+  }
+  return null
+}
 
 /**
  * Maps a synthetic ClaimResponse to a WellAuth submission state.
@@ -612,7 +637,9 @@ export async function reconcileSubmission(workflowId, { correlationId = randomUU
       'Payer receipt does not match the transmitted request')
   }
 
-  const response = body.response ?? null
+  // Accepts either a bare ClaimResponse (how the payer stores its decision) or
+  // a PAS response Bundle, so reconciliation is independent of transport shape.
+  const response = extractClaimResponse(body.response)
   const interpreted = response
     ? interpretClaimResponse(response)
     : { state: 'SUBMITTED_OR_PENDING', payerStatus: 'pending' }
