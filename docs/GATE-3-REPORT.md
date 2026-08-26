@@ -135,7 +135,7 @@ resolves inside the bundle.
 | Destination | Northstar Health Plan (**simulated**) |
 | Transport | `POST /Claim/$submit`, Cloud Run ID token |
 | Attempts | 1 |
-| PAS validation | see `GATE-3-PAS-VALIDATION.md` |
+| PAS validation | PASS WITH LIMITATIONS — see `GATE-3-PAS-VALIDATION.md` |
 
 ### Payer response
 
@@ -161,7 +161,7 @@ always carries `simulated: true` with an explicit simulation notice.
 
 | Resource | Value |
 |---|---|
-| Provider | `wellauth-provider`, revision `wellauth-provider-00006-bjg`, `--no-allow-unauthenticated` |
+| Provider | `wellauth-provider`, revision `wellauth-provider-00007-9wx`, `--no-allow-unauthenticated` |
 | Payer simulator | `wellauth-payer-simulator`, revision `wellauth-payer-simulator-00003-chk`, `--no-allow-unauthenticated` |
 | Provider SA | `wellauth-provider-sa` — `healthcare.fhirResourceReader` (read-only), `datastore.user` conditioned to `wellauth-workflow` |
 | Payer SA | `wellauth-payer-sa` — `datastore.user` conditioned to `wellauth-payer`. **No Healthcare API access of any kind.** |
@@ -200,13 +200,17 @@ route, outcome, receipt id and mode. The payer never logs the claim or bundle.
 npm test                                                      # Gate 0   46/46
 npm run test:fhir-smoke                                       # Gate 1   93/93
 npm run test:gate2                                            # Gate 2  147/147
-PAYER_BASE_URL=<payer> npm run test:gate3                     # Gate 3  173/173
+PAYER_BASE_URL=<payer> npm run test:gate3                     # Gate 3  182/182
 GATE3_BASE_URL=<provider> PAYER_BASE_URL=<payer> \
-  npm run test:gate3                                          # Gate 3  174/174
+  npm run test:gate3                                          # Gate 3  183/183
 ```
 
 The deployed run adds one check (query-string injection against the bounded
 status route) that only exists over HTTP.
+
+Both runs include a live IAM assertion that the payer runtime identity is
+denied (403) the provider's workflow database while permitted its own — the
+trust boundary is enforced by IAM, not by naming convention.
 
 ## Not claimed
 

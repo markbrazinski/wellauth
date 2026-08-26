@@ -45,7 +45,10 @@ export const SUBMISSION_STATES = [
 
 /** Server-bound destination. A caller can never name a payer URL. */
 export const PAYER_BASE_URL = process.env.PAYER_BASE_URL ?? ''
-const PAYER_TIMEOUT_MS = Number(process.env.PAYER_TIMEOUT_MS ?? 15_000)
+// Bounds the payer HTTP call only (credential minting happens before the timer
+// is armed). Sized for a Cloud Run cold start on the payer side; a genuinely
+// hung payer still resolves to UNKNOWN_SUBMISSION_OUTCOME rather than hanging.
+const PAYER_TIMEOUT_MS = Number(process.env.PAYER_TIMEOUT_MS ?? 30_000)
 
 const nowIso = () => new Date().toISOString()
 
@@ -98,12 +101,31 @@ async function transmit({ bundle, mode, correlationId }) {
       { retryable: true })
   }
   const url = `${PAYER_BASE_URL}/Claim/$submit`
+
+  // Mint the credential BEFORE arming the timeout. The first token mint of a
+  // process can take >13s (ADC discovery), and if that ran inside the timeout
+  // budget it would consume the whole allowance and abort a payer call that
+  // never actually got made -- turning a healthy submission into a spurious
+  // UNKNOWN_SUBMISSION_OUTCOME. The timeout must bound the PAYER call only.
+  let token
+  try {
+    token = await payerIdToken(PAYER_BASE_URL)
+  } catch (cause) {
+    // No credential means nothing was transmitted. That is a KNOWN
+    // non-acceptance, not an ambiguous outcome.
+    if (process.env.WELLAUTH_DEBUG_TRANSPORT === 'true') {
+      console.error('CREDENTIAL_DEBUG', cause?.name, cause?.message)
+    }
+    throw cause instanceof DomainError ? cause : new DomainError(
+      'PAYER_UNAVAILABLE', 'Could not authenticate to the payer boundary',
+      { retryable: true })
+  }
+
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), PAYER_TIMEOUT_MS)
 
   let res
   try {
-    const token = await payerIdToken(PAYER_BASE_URL)
     res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -120,6 +142,9 @@ async function transmit({ bundle, mode, correlationId }) {
   } catch (cause) {
     // Connection reset / abort / DNS. We do NOT know whether the payer
     // recorded the request -- an accept-then-disconnect lands exactly here.
+    if (process.env.WELLAUTH_DEBUG_TRANSPORT === 'true') {
+      console.error('TRANSPORT_DEBUG', cause?.name, cause?.message, cause?.cause?.message)
+    }
     return { classification: 'unknown', reason: cause?.name === 'AbortError' ? 'timeout' : 'transport' }
   } finally {
     clearTimeout(timer)

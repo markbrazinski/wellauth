@@ -779,7 +779,57 @@ check('P0.19 no affirmative X12 / clearinghouse capability is claimed',
 check('P0.19 the PAS claim is explicitly scoped to "shaped", not conformant',
   /PAS-SHAPED|PAS-shaped/.test(readFileSync('provider/pas.js', 'utf8')) &&
   /not a claim of Da Vinci PAS/i.test(readFileSync('provider/pas.js', 'utf8')))
-// The validator artifact is produced out-of-band; see docs/GATE-3-PAS-VALIDATION.md.
+// Structural conformance against the OFFICIAL PAS 2.2.1 package, when it is
+// present in the local FHIR package cache. This is real profile evidence that
+// does not depend on the full IG validator completing (which it does not --
+// see docs/gate3/VALIDATOR-CHALLENGE.md). Skipped cleanly when absent.
+const PAS_PKG = `${process.env.HOME}/.fhir/packages/hl7.fhir.us.davinci-pas#2.2.1/package`
+if (await import('node:fs').then((f) => f.existsSync(PAS_PKG))) {
+  const readPkg = (f) => JSON.parse(readFileSync(`${PAS_PKG}/${f}`, 'utf8'))
+
+  // The operation WellAuth posts to must be the one PAS actually defines.
+  const opDef = readPkg('OperationDefinition-Claim-submit.json')
+  check('P0.19 PAS defines operation code "submit" on Claim',
+    opDef.code === 'submit' && opDef.resource?.includes('Claim'))
+  check('P0.19 PAS Claim/$submit is a TYPE-level operation (matches our transport)',
+    opDef.type === true && opDef.instance !== true)
+  check('P0.19 PAS Claim/$submit takes a Bundle in',
+    opDef.parameter?.some((x) => x.use === 'in' && x.type === 'Bundle'))
+
+  // Request bundle profile: Bundle.type must be collection.
+  const reqBundle = readPkg('StructureDefinition-profile-pas-request-bundle.json')
+  const bundleType = reqBundle.snapshot.element.find((e) => e.path === 'Bundle.type')
+  check('P0.19 our Bundle.type matches the PAS request-bundle pattern',
+    bundleType?.patternCode === compiled18.bundle.type,
+    `${bundleType?.patternCode} vs ${compiled18.bundle.type}`)
+
+  // Every required top-level Claim element, straight from the profile.
+  const claimProfile = readPkg('StructureDefinition-profile-claim.json')
+  const required = claimProfile.snapshot.element
+    .filter((e) => e.path.split('.').length === 2 && (e.min ?? 0) >= 1)
+  const missing = required
+    .map((e) => e.path.split('.')[1])
+    .filter((name) => {
+      const v = claim19[name]
+      return v === undefined || v === null ||
+        (Array.isArray(v) && v.length === 0)
+    })
+  check('P0.19 all PAS-required Claim elements are present',
+    missing.length === 0, `missing: ${missing.join(', ')}`)
+
+  // Fixed/pattern values the profile pins.
+  for (const path of ['Claim.status', 'Claim.use']) {
+    const el = claimProfile.snapshot.element.find((e) => e.path === path)
+    const want = el?.patternCode ?? el?.fixedCode
+    if (!want) continue
+    check(`P0.19 ${path} matches the PAS fixed value "${want}"`,
+      claim19[path.split('.')[1]] === want, String(claim19[path.split('.')[1]]))
+  }
+} else {
+  console.log('  (PAS 2.2.1 package not in local cache -- structural profile checks skipped)')
+}
+// The full-IG validator artifact is produced out-of-band; see
+// docs/GATE-3-PAS-VALIDATION.md for exactly what was and was not established.
 // The suite writes the exact outgoing artifact so validation runs on the REAL bytes.
 const { writeFileSync, mkdirSync } = await import('node:fs')
 mkdirSync('docs/gate3', { recursive: true })
