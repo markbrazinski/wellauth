@@ -1,0 +1,10 @@
+FROM node:22-slim
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+# provider/canonical.js is the single definition of the canonical hash; the
+# payer re-exports it so both sides of the boundary hash identically.
+COPY payer ./payer
+COPY provider/canonical.js ./provider/canonical.js
+ENV PORT=8080
+CMD ["node", "payer/index.js"]

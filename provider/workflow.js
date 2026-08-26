@@ -41,6 +41,22 @@ export const STATES = [
   'APPROVED',
 ]
 
+/**
+ * Gate 3 extends the machine past APPROVED. Submission states live on
+ * `submission.state` rather than on `state`, because the workflow's own state
+ * stays APPROVED for the whole submission lifecycle: the approval is the thing
+ * being consumed, and collapsing both axes into one field would lose the
+ * distinction between "approved and not yet sent" and "approved and in flight".
+ * See provider/submission.js.
+ */
+export const SUBMISSION_STATES = [
+  'SUBMITTING',
+  'SUBMITTED_OR_PENDING',
+  'COMPLETE',
+  'FAILED',
+  'UNKNOWN_SUBMISSION_OUTCOME',
+]
+
 /** Version of the deterministic payer requirement set. Bumping invalidates. */
 export const REQUIREMENT_SET_VERSION =
   process.env.WELLAUTH_REQUIREMENT_SET_VERSION ?? 'northstar-cardiac-mri-v1'
@@ -238,6 +254,22 @@ export async function getWorkflow(workflowId) {
           outcome: d.approval.outcome,
         }
       : null,
+    // Bounded submission summary. Never the outbound bundle or raw payer body.
+    submission: d.submission
+      ? {
+          submissionId: d.submission.submissionId,
+          state: d.submission.state,
+          claimIdentifier: d.submission.claimIdentifier,
+          requestHash: d.submission.requestHash,
+          packetHash: d.submission.packetHash,
+          destination: d.submission.destination,
+          attempts: d.submission.attempts,
+          payerStatus: d.submission.payerStatus ?? null,
+          startedAt: d.submission.startedAt,
+          completedAt: d.submission.completedAt ?? null,
+          simulated: true,
+        }
+      : null,
     bindings: bindings.docs
       .map((b) => b.data())
       .sort((a, z) => a.requirementId.localeCompare(z.requirementId))
@@ -363,6 +395,21 @@ function invalidationFields() {
   }
 }
 
+/**
+ * Guard for operations that would invalidate a preparation.
+ *
+ * Once a submission has actually crossed the payer boundary, tearing down the
+ * workflow underneath it would orphan a real outbound transaction. Editing
+ * evidence after transmission is therefore refused rather than silently
+ * discarding the payer's record of what was sent.
+ */
+function assertNotSubmitted(d) {
+  const st = d.submission?.state
+  if (!st || st === 'FAILED') return
+  throw new DomainError('ALREADY_SUBMITTED',
+    'This authorization has been submitted; workflow evidence can no longer be changed')
+}
+
 function stateAfterBindingChange(completeness) {
   return completeness.complete ? 'PACKET_COMPLETE' : 'REQUIREMENTS_RESOLVED'
 }
@@ -418,6 +465,7 @@ export async function attachEvidence(workflowId, { requirementId, evidenceHandle
     if (d.state === 'CONTEXT_READY') {
       throw new DomainError('REQUIREMENTS_NOT_RESOLVED', 'Requirements have not been resolved')
     }
+    assertNotSubmitted(d)
     const bindingsSnap = await tx.get(bindingsCol(workflowId))
     const others = bindingsSnap.docs
       .map((b) => b.data())
@@ -471,6 +519,7 @@ export async function removeEvidence(workflowId, { requirementId, expectedRevisi
     if (d.revision !== expectedRevision) {
       throw new DomainError('REVISION_CONFLICT', `Workflow has advanced to revision ${d.revision}`)
     }
+    assertNotSubmitted(d)
     const bSnap = await tx.get(bindingRef(workflowId, requirementId))
     if (!bSnap.exists) throw new DomainError('NOT_BOUND', 'No evidence attached to that requirement')
 
@@ -619,6 +668,7 @@ export async function prepareSubmission(workflowId, { expectedRevision, idempote
     if (d.requirementSetVersion !== REQUIREMENT_SET_VERSION) {
       throw new DomainError('REQUIREMENT_SET_STALE', 'Requirement set version has changed')
     }
+    assertNotSubmitted(d)
 
     const bindingsSnap = await bindingsCol(workflowId).get()
     const bindings = bindingsSnap.docs
@@ -883,6 +933,7 @@ export async function reconcileSources(workflowId, { expectedRevision } = {}) {
     if (d.revision !== expectedRevision) {
       throw new DomainError('REVISION_CONFLICT', `Workflow has advanced to revision ${d.revision}`)
     }
+    assertNotSubmitted(d)
     const bindingsSnap = await tx.get(bindingsCol(workflowId))
     // Bindings whose source moved are dropped: re-attaching is a human choice,
     // not something reconciliation may infer.

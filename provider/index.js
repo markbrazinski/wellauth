@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto'
 import { DomainError } from './service.js'
 import * as service from './service.js'
 import * as workflow from './workflow.js'
+import * as submission from './submission.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 
@@ -45,6 +46,19 @@ const HTTP_STATUS = {
   CONTEXT_MISMATCH: 403,
   FHIR_UNAVAILABLE: 503,
   FHIR_RESPONSE_INVALID: 502,
+  // Gate 3 submission codes.
+  APPROVAL_REQUIRED: 409,
+  APPROVAL_STALE: 409,
+  PACKET_HASH_MISMATCH: 409,
+  SUBMISSION_IN_PROGRESS: 409,
+  DUPLICATE_SUBMISSION: 409,
+  ALREADY_SUBMITTED: 409,
+  NO_SUBMISSION: 409,
+  NOTHING_TO_RECONCILE: 409,
+  PAYER_REJECTED: 502,
+  PAYER_UNAVAILABLE: 503,
+  PAYER_RESPONSE_INVALID: 502,
+  UNKNOWN_SUBMISSION_OUTCOME: 409,
 }
 
 // Opaque-id shape guard. Nothing that reaches the domain layer can carry a FHIR
@@ -73,7 +87,7 @@ function stripHandleIds(value) {
 }
 
 /** Routes whose payload legitimately names exact source resources. */
-const DISCLOSURE_ROUTES = /\/(disclosure|state|prepare|approval|evidence\/(attach|remove)|requirements|reconcile)$|^\/workflows\/[^/]+$/
+const DISCLOSURE_ROUTES = /\/(disclosure|state|prepare|approval|evidence\/(attach|remove)|requirements|reconcile|submit|authorization-status)$|^\/workflows\/[^/]+$/
 
 const ROUTES = [
   [/^\/health$/, () => service.health()],
@@ -89,6 +103,11 @@ const ROUTES = [
   ],
   [/^\/workflows\/([^/]+)\/state$/, (m) => workflow.getWorkflow(m[1])],
   [/^\/workflows\/([^/]+)\/disclosure$/, (m) => workflow.getPreparedDisclosure(m[1])],
+  // check_authorization_status -- bounded: the ONLY input is the workflow id.
+  // There is deliberately no parameter for a Claim id or payer reference, so a
+  // caller cannot ask this route about someone else's submission.
+  [/^\/workflows\/([^/]+)\/authorization-status$/,
+    (m) => submission.checkAuthorizationStatus(m[1])],
 ]
 
 /**
@@ -127,6 +146,28 @@ const POST_ROUTES = [
   [
     /^\/workflows\/([^/]+)\/reconcile$/,
     (m, body) => workflow.reconcileSources(m[1], { expectedRevision: body.expected_revision }),
+  ],
+  // submit_prior_authorization. Reachable only in APPROVED; every precondition
+  // is re-verified server-side and the destination is server-bound -- the body
+  // cannot name a payer, a Claim identifier or a target state.
+  [
+    /^\/workflows\/([^/]+)\/submit$/,
+    (m, body, headers) =>
+      submission.submitPriorAuthorization(m[1], {
+        expectedRevision: body.expected_revision,
+        idempotencyKey: headers['idempotency-key'],
+        // Test-only scenario selector for the payer simulator. Ignored unless
+        // the deployment explicitly enables simulator scenarios.
+        simulatorMode: process.env.PAYER_SIM_MODES_ENABLED === 'true'
+          ? headers['x-payer-sim-mode']
+          : undefined,
+      }),
+  ],
+  // Explicit operator-driven resolution of UNKNOWN_SUBMISSION_OUTCOME.
+  // Never resends: it asks the payer what it already holds.
+  [
+    /^\/workflows\/([^/]+)\/submission\/reconcile$/,
+    (m) => submission.reconcileSubmission(m[1]),
   ],
 ]
 

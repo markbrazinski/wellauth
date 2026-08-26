@@ -13,7 +13,8 @@
     "test:fhir-smoke": "node provider/smoke.js",
     "fhir:seed": "node provider/seed.js",
     "provider": "node provider/index.js",
-    "test:gate2": "node provider/gate2.js"
+    "test:gate2": "node provider/gate2.js",
+    "test:gate3": "node provider/gate3.js"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.0.0",

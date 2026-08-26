@@ -1,0 +1,519 @@
+{
+  "resourceType": "Bundle",
+  "id": "wellauth-pa-bundle-c599fdabced3b356",
+  "meta": {
+    "tag": [
+      {
+        "system": "urn:wellauth:submission",
+        "code": "synthetic",
+        "display": "Synthetic prior authorization -- simulated payer"
+      }
+    ]
+  },
+  "type": "collection",
+  "timestamp": "2026-08-26T15:44:15.322Z",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Claim",
+        "id": "wellauth-pa-c599fdabced3b356",
+        "meta": {
+          "tag": [
+            {
+              "system": "urn:wellauth:submission",
+              "code": "synthetic",
+              "display": "Synthetic prior authorization -- simulated payer"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "system": "urn:wellauth:claim",
+            "value": "WA-wf-wellauth-001-c599fdabced3b3567c2a229c"
+          }
+        ],
+        "status": "active",
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/claim-type",
+              "code": "institutional",
+              "display": "Institutional"
+            }
+          ]
+        },
+        "use": "preauthorization",
+        "patient": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "created": "2026-08-26T15:44:15.322Z",
+        "provider": {
+          "reference": "Organization/wellauth-org-clinic"
+        },
+        "priority": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/processpriority",
+              "code": "normal"
+            }
+          ]
+        },
+        "insurer": {
+          "reference": "Organization/wellauth-org-northstar"
+        },
+        "insurance": [
+          {
+            "sequence": 1,
+            "focal": true,
+            "coverage": {
+              "reference": "Coverage/wellauth-coverage-001"
+            }
+          }
+        ],
+        "supportingInfo": [
+          {
+            "sequence": 1,
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                  "code": "info",
+                  "display": "Information"
+                }
+              ],
+              "text": "req-001"
+            },
+            "valueReference": {
+              "reference": "Condition/wellauth-condition-001"
+            }
+          },
+          {
+            "sequence": 2,
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                  "code": "info",
+                  "display": "Information"
+                }
+              ],
+              "text": "req-002"
+            },
+            "valueReference": {
+              "reference": "DiagnosticReport/wellauth-echo-001"
+            }
+          },
+          {
+            "sequence": 3,
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                  "code": "info",
+                  "display": "Information"
+                }
+              ],
+              "text": "req-003"
+            },
+            "valueReference": {
+              "reference": "DocumentReference/wellauth-doc-conservative-therapy"
+            }
+          },
+          {
+            "sequence": 4,
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                  "code": "info",
+                  "display": "Information"
+                }
+              ],
+              "text": "req-004"
+            },
+            "valueReference": {
+              "reference": "PractitionerRole/wellauth-practrole-001"
+            }
+          },
+          {
+            "sequence": 5,
+            "category": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                  "code": "info",
+                  "display": "Information"
+                }
+              ],
+              "text": "req-005"
+            },
+            "valueReference": {
+              "reference": "Coverage/wellauth-coverage-001"
+            }
+          }
+        ],
+        "item": [
+          {
+            "sequence": 1,
+            "productOrService": {
+              "coding": [
+                {
+                  "code": "75561",
+                  "display": "Cardiac MRI for morphology and function without contrast, followed by contrast",
+                  "system": "http://www.ama-assn.org/go/cpt"
+                },
+                {
+                  "code": "241620005",
+                  "display": "Magnetic resonance imaging of heart",
+                  "system": "http://snomed.info/sct"
+                }
+              ],
+              "text": "Cardiac MRI with contrast"
+            },
+            "servicedDate": "2026-09-15",
+            "provider": {
+              "reference": "Organization/wellauth-org-clinic"
+            },
+            "informationSequence": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          }
+        ],
+        "diagnosis": [
+          {
+            "sequence": 1,
+            "diagnosisCodeableConcept": {
+              "coding": [
+                {
+                  "code": "29857009",
+                  "display": "Chest pain",
+                  "system": "http://snomed.info/sct"
+                }
+              ],
+              "text": "Exertional chest pain"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "active": true,
+        "birthDate": "1968-03-11",
+        "gender": "female",
+        "id": "wellauth-patient-001",
+        "identifier": [
+          {
+            "system": "urn:wellauth:synthetic:mrn",
+            "value": "WELLAUTH-CANARY-MRN-8842"
+          }
+        ],
+        "name": [
+          {
+            "family": "Testpatient",
+            "given": [
+              "Wellauth",
+              "Synthetic"
+            ],
+            "use": "official"
+          }
+        ],
+        "resourceType": "Patient",
+        "meta": {
+          "versionId": "MTc4Nzc0ODU4Mjc0MzQ0ODAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "active": true,
+        "id": "wellauth-practitioner-001",
+        "identifier": [
+          {
+            "system": "http://hl7.org/fhir/sid/us-npi",
+            "value": "9999999995"
+          }
+        ],
+        "name": [
+          {
+            "family": "Cardwell",
+            "given": [
+              "Ada"
+            ],
+            "prefix": [
+              "Dr"
+            ],
+            "use": "official"
+          }
+        ],
+        "resourceType": "Practitioner",
+        "meta": {
+          "versionId": "MTc4Nzc0ODU4MzY5MTY4NzAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "active": true,
+        "code": [
+          {
+            "coding": [
+              {
+                "code": "207RC0000X",
+                "display": "Cardiovascular Disease Physician",
+                "system": "http://nucc.org/provider-taxonomy"
+              }
+            ]
+          }
+        ],
+        "id": "wellauth-practrole-001",
+        "organization": {
+          "reference": "Organization/wellauth-org-clinic"
+        },
+        "period": {
+          "start": "2020-01-01"
+        },
+        "practitioner": {
+          "reference": "Practitioner/wellauth-practitioner-001"
+        },
+        "resourceType": "PractitionerRole",
+        "specialty": [
+          {
+            "coding": [
+              {
+                "code": "394579002",
+                "display": "Cardiology",
+                "system": "http://snomed.info/sct"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "versionId": "MTc4Nzc0ODU4NDE2MDE0MTAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "active": true,
+        "id": "wellauth-org-clinic",
+        "name": "Wellauth Synthetic Cardiology Clinic",
+        "resourceType": "Organization",
+        "type": [
+          {
+            "coding": [
+              {
+                "code": "prov",
+                "display": "Healthcare Provider",
+                "system": "http://terminology.hl7.org/CodeSystem/organization-type"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "versionId": "MTc4Nzc0ODU4NDAwODE5NTAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "active": true,
+        "id": "wellauth-org-northstar",
+        "name": "Northstar Health Plan (fictional synthetic payer)",
+        "resourceType": "Organization",
+        "type": [
+          {
+            "coding": [
+              {
+                "code": "ins",
+                "display": "Insurance Company",
+                "system": "http://terminology.hl7.org/CodeSystem/organization-type"
+              }
+            ]
+          }
+        ],
+        "meta": {
+          "versionId": "MTc4Nzc0ODU4Mzg1Nzc1MjAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "beneficiary": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "id": "wellauth-coverage-001",
+        "payor": [
+          {
+            "reference": "Organization/wellauth-org-northstar"
+          }
+        ],
+        "period": {
+          "end": "2026-12-31",
+          "start": "2026-01-01"
+        },
+        "resourceType": "Coverage",
+        "status": "active",
+        "subscriberId": "NS-SYNTH-4417",
+        "type": {
+          "coding": [
+            {
+              "code": "PPO",
+              "display": "preferred provider organization policy",
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode"
+            }
+          ]
+        },
+        "meta": {
+          "versionId": "MTc4Nzc1ODk3NjU2MjcyNDAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "encounter-diagnosis",
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category"
+              }
+            ]
+          }
+        ],
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active",
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "code": "29857009",
+              "display": "Chest pain",
+              "system": "http://snomed.info/sct"
+            }
+          ],
+          "text": "Exertional chest pain"
+        },
+        "id": "wellauth-condition-001",
+        "onsetDateTime": "2026-07-02",
+        "recordedDate": "2026-07-20",
+        "resourceType": "Condition",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "code": "confirmed",
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status"
+            }
+          ]
+        },
+        "meta": {
+          "versionId": "MTc4Nzc1Nzg0OTkwOTYzNjAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "CUS",
+                "display": "Cardiac Ultrasound",
+                "system": "http://terminology.hl7.org/CodeSystem/v2-0074"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "34552-0",
+              "display": "Cardiac echo study",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Transthoracic echocardiogram"
+        },
+        "conclusion": "Reduced left ventricular ejection fraction. Further cardiac imaging advised.",
+        "effectiveDateTime": "2026-07-28T10:00:00Z",
+        "id": "wellauth-echo-001",
+        "issued": "2026-07-28T12:00:00Z",
+        "performer": [
+          {
+            "reference": "Practitioner/wellauth-practitioner-001"
+          }
+        ],
+        "resourceType": "DiagnosticReport",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "meta": {
+          "versionId": "MTc4Nzc1ODk1ODQ1NzA5MTAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "author": [
+          {
+            "reference": "Practitioner/wellauth-practitioner-001"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "LP173421-1",
+                "display": "Report",
+                "system": "http://loinc.org"
+              }
+            ]
+          }
+        ],
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "title": "Conservative therapy trial: beta-blocker and nitrate, inadequate response",
+              "creation": "2026-08-01T09:00:00Z"
+            }
+          }
+        ],
+        "date": "2026-08-01T09:00:00Z",
+        "docStatus": "final",
+        "id": "wellauth-doc-conservative-therapy",
+        "resourceType": "DocumentReference",
+        "status": "current",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "type": {
+          "coding": [
+            {
+              "code": "11488-4",
+              "display": "Consult note",
+              "system": "http://loinc.org"
+            }
+          ],
+          "text": "Cardiology consult note - conservative therapy trial outcome"
+        },
+        "meta": {
+          "versionId": "MTc4Nzc1NTY5MDEzMzAzNzAwMA"
+        }
+      }
+    }
+  ]
+}

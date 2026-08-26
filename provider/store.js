@@ -39,11 +39,16 @@ export const handleRef = (workflowId, handle) =>
 export const idemRef = (workflowId, key) =>
   workflowRef(workflowId).collection('idempotency').doc(key)
 export const ledgerCol = (workflowId) => workflowRef(workflowId).collection('transitions')
+/** Gate 3 submission attempt ledger: append-only, one doc per attempt. */
+export const submissionRef = (workflowId, attemptId) =>
+  workflowRef(workflowId).collection('submissions').doc(attemptId)
+export const submissionsCol = (workflowId) => workflowRef(workflowId).collection('submissions')
 
 /** Deletes a workflow and its subcollections. Test-fixture use only. */
 export async function purgeWorkflow(workflowId) {
   const ref = workflowRef(workflowId)
-  for (const name of ['bindings', 'manifests', 'handles', 'idempotency', 'transitions']) {
+  for (const name of ['bindings', 'manifests', 'handles', 'idempotency', 'transitions',
+                      'submissions']) {
     const snap = await ref.collection(name).get()
     await Promise.all(snap.docs.map((d) => d.ref.delete()))
   }
