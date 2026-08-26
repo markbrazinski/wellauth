@@ -1,0 +1,790 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Patient/wellauth-patient-001"
+      },
+      "resource": {
+        "resourceType": "Patient",
+        "id": "wellauth-patient-001",
+        "identifier": [
+          {
+            "system": "urn:wellauth:synthetic:mrn",
+            "value": "WELLAUTH-CANARY-MRN-8842"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Testpatient",
+            "given": [
+              "Wellauth",
+              "Synthetic"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1968-03-11"
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Patient/wellauth-patient-002"
+      },
+      "resource": {
+        "resourceType": "Patient",
+        "id": "wellauth-patient-002",
+        "identifier": [
+          {
+            "system": "urn:wellauth:synthetic:mrn",
+            "value": "WELLAUTH-CANARY-MRN-9001"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Otherpatient",
+            "given": [
+              "Decoy",
+              "Synthetic"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1975-09-02"
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Practitioner/wellauth-practitioner-001"
+      },
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "wellauth-practitioner-001",
+        "identifier": [
+          {
+            "system": "http://hl7.org/fhir/sid/us-npi",
+            "value": "9999999995"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Cardwell",
+            "given": [
+              "Ada"
+            ],
+            "prefix": [
+              "Dr"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Organization/wellauth-org-northstar"
+      },
+      "resource": {
+        "resourceType": "Organization",
+        "id": "wellauth-org-northstar",
+        "active": true,
+        "name": "Northstar Health Plan (fictional synthetic payer)",
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+                "code": "ins",
+                "display": "Insurance Company"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Organization/wellauth-org-clinic"
+      },
+      "resource": {
+        "resourceType": "Organization",
+        "id": "wellauth-org-clinic",
+        "active": true,
+        "name": "Wellauth Synthetic Cardiology Clinic",
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+                "code": "prov",
+                "display": "Healthcare Provider"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "PractitionerRole/wellauth-practrole-001"
+      },
+      "resource": {
+        "resourceType": "PractitionerRole",
+        "id": "wellauth-practrole-001",
+        "active": true,
+        "period": {
+          "start": "2020-01-01"
+        },
+        "practitioner": {
+          "reference": "Practitioner/wellauth-practitioner-001"
+        },
+        "organization": {
+          "reference": "Organization/wellauth-org-clinic"
+        },
+        "code": [
+          {
+            "coding": [
+              {
+                "system": "http://nucc.org/provider-taxonomy",
+                "code": "207RC0000X",
+                "display": "Cardiovascular Disease Physician"
+              }
+            ]
+          }
+        ],
+        "specialty": [
+          {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "394579002",
+                "display": "Cardiology"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "ServiceRequest/wellauth-order-001"
+      },
+      "resource": {
+        "resourceType": "ServiceRequest",
+        "id": "wellauth-order-001",
+        "status": "active",
+        "intent": "order",
+        "authoredOn": "2026-08-10T14:05:00Z",
+        "priority": "routine",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "requester": {
+          "reference": "Practitioner/wellauth-practitioner-001"
+        },
+        "performer": [
+          {
+            "reference": "Organization/wellauth-org-clinic"
+          }
+        ],
+        "occurrenceDateTime": "2026-09-15T15:30:00Z",
+        "code": {
+          "coding": [
+            {
+              "system": "http://www.ama-assn.org/go/cpt",
+              "code": "75561",
+              "display": "Cardiac MRI for morphology and function without contrast, followed by contrast"
+            },
+            {
+              "system": "http://snomed.info/sct",
+              "code": "241620005",
+              "display": "Magnetic resonance imaging of heart"
+            }
+          ],
+          "text": "Cardiac MRI with contrast"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/wellauth-condition-001"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Coverage/wellauth-coverage-001"
+      },
+      "resource": {
+        "resourceType": "Coverage",
+        "id": "wellauth-coverage-001",
+        "status": "active",
+        "beneficiary": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "payor": [
+          {
+            "reference": "Organization/wellauth-org-northstar"
+          }
+        ],
+        "subscriberId": "NS-SYNTH-4417",
+        "period": {
+          "start": "2026-01-01",
+          "end": "2026-12-31"
+        },
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+              "code": "PPO",
+              "display": "preferred provider organization policy"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Coverage/wellauth-coverage-decoy-cancelled"
+      },
+      "resource": {
+        "resourceType": "Coverage",
+        "id": "wellauth-coverage-decoy-cancelled",
+        "status": "cancelled",
+        "beneficiary": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "payor": [
+          {
+            "reference": "Organization/wellauth-org-northstar"
+          }
+        ],
+        "subscriberId": "NS-SYNTH-0000-OLD",
+        "period": {
+          "start": "2024-01-01",
+          "end": "2024-12-31"
+        },
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+              "code": "PPO",
+              "display": "preferred provider organization policy"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Condition/wellauth-condition-001"
+      },
+      "resource": {
+        "resourceType": "Condition",
+        "id": "wellauth-condition-001",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "recordedDate": "2026-07-20",
+        "onsetDateTime": "2026-07-02",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "encounter-diagnosis"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "29857009",
+              "display": "Chest pain"
+            }
+          ],
+          "text": "Exertional chest pain"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Condition/wellauth-condition-002"
+      },
+      "resource": {
+        "resourceType": "Condition",
+        "id": "wellauth-condition-002",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "recordedDate": "2026-07-22",
+        "onsetDateTime": "2026-07-05",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "267036007",
+              "display": "Dyspnea"
+            }
+          ],
+          "text": "Dyspnea on exertion"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Condition/wellauth-condition-decoy-stale"
+      },
+      "resource": {
+        "resourceType": "Condition",
+        "id": "wellauth-condition-decoy-stale",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "recordedDate": "2019-02-10",
+        "onsetDateTime": "2019-02-01",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "resolved"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "29857009",
+              "display": "Chest pain"
+            }
+          ],
+          "text": "Chest pain (historical, resolved 2019 - outside allowed window)"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Condition/wellauth-condition-decoy-erroneous"
+      },
+      "resource": {
+        "resourceType": "Condition",
+        "id": "wellauth-condition-decoy-erroneous",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "recordedDate": "2026-07-25",
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "entered-in-error"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "29857009",
+              "display": "Chest pain"
+            }
+          ],
+          "text": "Chest pain (entered in error - must never be eligible)"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Condition/wellauth-condition-decoy-ortho"
+      },
+      "resource": {
+        "resourceType": "Condition",
+        "id": "wellauth-condition-decoy-ortho",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "recordedDate": "2026-07-18",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "44465007",
+              "display": "Sprain of ankle"
+            }
+          ],
+          "text": "Right ankle sprain (unrelated orthopedic)"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Condition/wellauth-condition-crosspatient"
+      },
+      "resource": {
+        "resourceType": "Condition",
+        "id": "wellauth-condition-crosspatient",
+        "subject": {
+          "reference": "Patient/wellauth-patient-002"
+        },
+        "recordedDate": "2026-07-19",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "29857009",
+              "display": "Chest pain"
+            }
+          ],
+          "text": "Chest pain (different patient - cross-patient leak canary)"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "DiagnosticReport/wellauth-echo-001"
+      },
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "wellauth-echo-001",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "effectiveDateTime": "2026-07-28T10:00:00Z",
+        "issued": "2026-07-28T12:00:00Z",
+        "performer": [
+          {
+            "reference": "Practitioner/wellauth-practitioner-001"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v2-0074",
+                "code": "CUS",
+                "display": "Cardiac Ultrasound"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "34552-0",
+              "display": "Cardiac echo study"
+            }
+          ],
+          "text": "Transthoracic echocardiogram"
+        },
+        "conclusion": "Reduced left ventricular ejection fraction. Further cardiac imaging advised."
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "DiagnosticReport/wellauth-echo-decoy-prelim"
+      },
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "wellauth-echo-decoy-prelim",
+        "status": "preliminary",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "effectiveDateTime": "2026-07-26T10:00:00Z",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "34552-0",
+              "display": "Cardiac echo study"
+            }
+          ],
+          "text": "Transthoracic echocardiogram (PRELIMINARY - not eligible)"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "DiagnosticReport/wellauth-lab-decoy"
+      },
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "wellauth-lab-decoy",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "effectiveDateTime": "2026-07-27T09:00:00Z",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "58410-2",
+              "display": "CBC panel - Blood by Automated count"
+            }
+          ],
+          "text": "Complete blood count (unrelated lab)"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Observation/wellauth-obs-lvef-001"
+      },
+      "resource": {
+        "resourceType": "Observation",
+        "id": "wellauth-obs-lvef-001",
+        "status": "final",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "effectiveDateTime": "2026-07-28T10:00:00Z",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "procedure"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "10230-1",
+              "display": "Left ventricular Ejection fraction"
+            }
+          ],
+          "text": "Left ventricular ejection fraction"
+        },
+        "valueQuantity": {
+          "value": 41,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "DocumentReference/wellauth-doc-conservative-therapy"
+      },
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "wellauth-doc-conservative-therapy",
+        "status": "current",
+        "docStatus": "final",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "date": "2026-08-01T09:00:00Z",
+        "author": [
+          {
+            "reference": "Practitioner/wellauth-practitioner-001"
+          }
+        ],
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consult note"
+            }
+          ],
+          "text": "Cardiology consult note - conservative therapy trial outcome"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "LP173421-1",
+                "display": "Report"
+              }
+            ]
+          }
+        ],
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "title": "Conservative therapy trial: beta-blocker and nitrate, inadequate response",
+              "creation": "2026-08-01T09:00:00Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "DocumentReference/wellauth-doc-decoy-superseded"
+      },
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "wellauth-doc-decoy-superseded",
+        "status": "superseded",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "date": "2026-07-15T09:00:00Z",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consult note"
+            }
+          ],
+          "text": "Cardiology consult note (SUPERSEDED - not eligible)"
+        },
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "title": "Superseded draft consult note"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "DocumentReference/wellauth-doc-decoy-ortho"
+      },
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "wellauth-doc-decoy-ortho",
+        "status": "current",
+        "docStatus": "final",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "date": "2026-07-18T09:00:00Z",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11488-4",
+              "display": "Consult note"
+            }
+          ],
+          "text": "Orthopedic consult note - ankle sprain (unrelated)"
+        },
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "title": "Orthopedic ankle sprain follow-up"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
