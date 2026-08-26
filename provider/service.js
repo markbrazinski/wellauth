@@ -247,6 +247,10 @@ export async function findEvidence(workflowId, requirementId) {
     alternatePath: Boolean(req.alternatePath),
     candidates: candidates.map((r) => ({
       evidenceHandle: handleFor(workflowId, r.resourceType, r.id),
+      // Internal only: stripped by the HTTP layer's projection. Gate 2 uses it
+      // to register handle -> exact resource id once, so later operations can
+      // do direct version-aware reads instead of replaying these searches.
+      resourceId: r.id,
       resourceType: r.resourceType,
       title: titleOf(r),
       code: codesOf(r)[0] ?? null,

@@ -12,9 +12,11 @@
     "server": "node server/index.js",
     "test:fhir-smoke": "node provider/smoke.js",
     "fhir:seed": "node provider/seed.js",
-    "provider": "node provider/index.js"
+    "provider": "node provider/index.js",
+    "test:gate2": "node provider/gate2.js"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^9.0.0",
     "google-auth-library": "^11.0.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
