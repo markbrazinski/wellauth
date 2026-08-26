@@ -19,8 +19,11 @@ import { createServer } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import {
   MODES,
+  extensionResponseFor,
   findByIdentifier,
+  purgeSubmission,
   receiptFor,
+  recordExtension,
   recordSubmission,
   responseBundleFor,
 } from './store.js'
@@ -157,11 +160,87 @@ const server = createServer(async (req, res) => {
     }, correlationId)
   }
 
+  // --- demo reset ---------------------------------------------------------
+  // NOT a healthcare route and off unless explicitly enabled. Clears the
+  // payer's record for one identifier so the canonical demo can be re-run;
+  // without it the payer's (correct, permanent) duplicate-collapse would keep
+  // returning the original decision forever.
+  if (url === '/demo/reset' && req.method === 'POST') {
+    if (process.env.PAYER_DEMO_RESET !== 'true') {
+      return send(res, 404, outcome('error', 'not-supported', 'Not enabled'), correlationId)
+    }
+    let body
+    try {
+      body = await readBody(req)
+    } catch {
+      return send(res, 400, outcome('error', 'structure', 'Malformed body'), correlationId)
+    }
+    if (typeof body.claimIdentifier !== 'string' || !body.claimIdentifier) {
+      return send(res, 400, outcome('error', 'invalid', 'claimIdentifier required'), correlationId)
+    }
+    await purgeSubmission(body.claimIdentifier)
+    console.log(JSON.stringify({ correlationId, route: 'demo-reset', outcome: 'ok' }))
+    return send(res, 200, { resourceType: 'Parameters',
+      parameter: [{ name: 'reset', valueBoolean: true }] }, correlationId)
+  }
+
+  // --- bounded authorization-window remediation ---------------------------
+  // NOT a generic payer mutation endpoint. The caller may name only an
+  // authorization it already holds, the validity it believes is current, and a
+  // requested end date the payer itself publishes. There is no route that
+  // accepts a new service, a new patient, clinical content or free text.
+  if (url === '/authorization-extension' && req.method === 'POST') {
+    let body
+    try {
+      body = await readBody(req)
+    } catch {
+      return send(res, 400, outcome('error', 'structure', 'Malformed request body'),
+        correlationId)
+    }
+
+    const required = ['claimIdentifier', 'authorizationReference',
+                      'expectedValidThrough', 'requestedValidThrough', 'remediationHash']
+    const missing = required.filter((k) => typeof body[k] !== 'string' || !body[k])
+    if (missing.length) {
+      console.log(JSON.stringify({
+        correlationId, route: 'extension', outcome: 'rejected-invalid',
+      }))
+      return send(res, 400, outcome('error', 'invalid',
+        `Missing or invalid: ${missing.join(', ')}`), correlationId)
+    }
+
+    const result = await recordExtension({
+      identifier: body.claimIdentifier,
+      authorizationReference: body.authorizationReference,
+      expectedValidThrough: body.expectedValidThrough,
+      requestedValidThrough: body.requestedValidThrough,
+      remediationHash: body.remediationHash,
+      correlationId,
+    })
+
+    if (result.error) {
+      console.log(JSON.stringify({
+        correlationId, route: 'extension', outcome: 'refused', code: result.error,
+      }))
+      const status = result.error === 'AUTHORIZATION_NOT_FOUND' ? 404 : 409
+      return send(res, status, outcome('error', 'processing', result.error), correlationId)
+    }
+
+    console.log(JSON.stringify({
+      correlationId, route: 'extension',
+      outcome: result.duplicate ? 'duplicate' : 'accepted',
+      receiptId: result.extension.extensionReceiptId,
+    }))
+    return send(res, result.duplicate ? 200 : 201,
+      extensionResponseFor(result.record, result.extension), correlationId)
+  }
+
   if (url !== '/Claim/$submit' || req.method !== 'POST') {
     // No generic proxying, no resource routes, no search.
     console.log(JSON.stringify({ correlationId, route: 'unknown', outcome: 'refused' }))
     return send(res, 404, outcome('error', 'not-supported',
-      'This simulated payer accepts only POST /Claim/$submit'), correlationId)
+      'This simulated payer accepts only POST /Claim/$submit and ' +
+      'POST /authorization-extension'), correlationId)
   }
 
   let bundle

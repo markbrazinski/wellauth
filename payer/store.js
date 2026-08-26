@@ -16,6 +16,13 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { Firestore } from '@google-cloud/firestore'
 import { packetHash } from './canonical.js'
+import {
+  CANONICAL_AUTHORIZATION_REFERENCE,
+  CANONICAL_WORKFLOW_ID,
+  EXTENDED_VALID_THROUGH,
+  INITIAL_VALID_THROUGH,
+  VALID_FROM,
+} from './fixture.js'
 
 export const DB_ID = process.env.PAYER_FIRESTORE_DATABASE ?? 'wellauth-payer'
 export const COLLECTION = 'northstar_submissions'
@@ -84,8 +91,7 @@ export async function recordSubmission({ identifier, claim, bundle, mode, correl
       receiptId: `NS-RCPT-${randomUUID()}`,
       identifier,
       // Payer's own authorization number, minted once and never re-minted.
-      authorizationNumber: `NS-AUTH-${createHash('sha256')
-        .update(identifier).digest('hex').slice(0, 12).toUpperCase()}`,
+      authorizationNumber: authorizationNumberFor(identifier),
       mode,
       requestHash,
       // Bounded echo only -- the payer records WHAT was asked for, not the
@@ -95,6 +101,10 @@ export async function recordSubmission({ identifier, claim, bundle, mode, correl
       itemCount: claim.item?.length ?? 0,
       supportingInfoCount: claim.supportingInfo?.length ?? 0,
       receivedAt: nowIso(),
+      // Authoritative validity end for this authorization. Act II extends
+      // exactly this field, and only through the bounded remediation route.
+      validThrough: INITIAL_VALID_THROUGH,
+      extension: null,
       replayCount: 0,
       correlationId,
       simulated: true,
@@ -227,11 +237,13 @@ function buildResponse(record) {
     // persisted to Firestore, which rejects undefined values outright.
     ...(decision.outcome === 'error' ? {} : {
       preAuthRef: record.authorizationNumber,
-      // Validity window is recorded because Act II will need it. Gate 3
-      // persists it and does nothing else -- no extension mechanics invented.
+      // Validity window. FIXED, not a rolling window from "now": the canonical
+      // fixture requires the approval to end BEFORE the scheduled MRI so the
+      // Act II coverage mismatch is deterministic on any day the demo runs.
+      // `validThrough` on the record is the authoritative value; this echoes it.
       preAuthPeriod: {
-        start: record.receivedAt.slice(0, 10),
-        end: addDays(record.receivedAt, 90),
+        start: VALID_FROM,
+        end: record.validThrough,
       },
     }),
     item: [{
@@ -255,8 +267,132 @@ function buildResponse(record) {
   }
 }
 
-function addDays(iso, days) {
-  const d = new Date(iso)
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().slice(0, 10)
+/**
+ * The canonical demo workflow gets the fixture's pinned authorization
+ * reference so the demo reads identically every run. Anything else keeps the
+ * derived value -- this pins the DEMO, it does not special-case correctness.
+ */
+function authorizationNumberFor(identifier) {
+  if (identifier.startsWith(`WA-${CANONICAL_WORKFLOW_ID}-`)) {
+    return CANONICAL_AUTHORIZATION_REFERENCE
+  }
+  return `NS-AUTH-${createHash('sha256')
+    .update(identifier).digest('hex').slice(0, 12).toUpperCase()}`
+}
+
+
+/**
+ * Records an authorization-window extension against an EXISTING authorization.
+ *
+ * This is a bounded remediation, not a generic mutation route: the caller may
+ * name only the authorization it already holds and the validity end the payer
+ * itself publishes. The original approval is preserved intact -- the extension
+ * is written alongside it, never over it, so the workflow retains the full
+ * history (initial approval -> mismatch -> remediation -> update).
+ *
+ * Exactly-once is the same mechanism Gate 3 proved for submission: a Firestore
+ * transaction on the one record, keyed by the provider's stable identifier. A
+ * replay returns the original extension and never re-decides.
+ */
+export async function recordExtension({
+  identifier, authorizationReference, expectedValidThrough, requestedValidThrough,
+  remediationHash, correlationId,
+}) {
+  const ref = docRef(identifier)
+
+  return firestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    if (!snap.exists) return { error: 'AUTHORIZATION_NOT_FOUND' }
+    const record = snap.data()
+
+    // The authorization must be the one the caller thinks it is.
+    if (record.authorizationNumber !== authorizationReference) {
+      return { error: 'AUTHORIZATION_REFERENCE_MISMATCH' }
+    }
+    // Only an approved authorization has a window to extend.
+    if (record.response?.outcome !== 'complete') {
+      return { error: 'AUTHORIZATION_NOT_APPROVED' }
+    }
+
+    // Replay: return the original decision, never a second one.
+    if (record.extension) {
+      if (record.extension.remediationHash === remediationHash) {
+        tx.update(ref, {
+          extensionReplayCount: (record.extensionReplayCount ?? 0) + 1,
+          lastSeenAt: nowIso(),
+        })
+        return { record, extension: record.extension, duplicate: true }
+      }
+      // A DIFFERENT remediation against an already-extended authorization is
+      // not a replay -- it is a second logical change, and is refused.
+      return { error: 'ALREADY_EXTENDED' }
+    }
+
+    // Compare-and-set on the validity the caller believed was current.
+    if (record.validThrough !== expectedValidThrough) {
+      return { error: 'VALIDITY_STATE_MISMATCH' }
+    }
+    // The payer publishes the permitted end date; it is not caller-chosen.
+    if (requestedValidThrough !== EXTENDED_VALID_THROUGH) {
+      return { error: 'REQUESTED_VALIDITY_NOT_PERMITTED' }
+    }
+
+    const extension = {
+      extensionReceiptId: `NS-EXT-${randomUUID()}`,
+      authorizationReference,
+      previousValidThrough: record.validThrough,
+      validThrough: requestedValidThrough,
+      remediationHash,
+      outcome: 'updated',
+      receivedAt: nowIso(),
+      correlationId,
+      simulated: true,
+    }
+
+    tx.update(ref, {
+      validThrough: requestedValidThrough,
+      extension,
+      extensionReplayCount: 0,
+      lastSeenAt: nowIso(),
+      // The ORIGINAL response object is deliberately left untouched.
+    })
+    return { record: { ...record, validThrough: requestedValidThrough, extension },
+             extension, duplicate: false }
+  })
+}
+
+/** Bounded response for an accepted extension. Never echoes clinical content. */
+export function extensionResponseFor(record, extension) {
+  return {
+    resourceType: 'Parameters',
+    meta: {
+      tag: [{
+        system: 'urn:wellauth:payer-sim',
+        code: 'simulated',
+        display: 'SIMULATED PAYER -- Northstar Health Plan (fictional)',
+      }],
+    },
+    parameter: [
+      { name: 'outcome', valueString: extension.outcome },
+      { name: 'authorizationReference', valueString: extension.authorizationReference },
+      { name: 'previousValidThrough', valueString: extension.previousValidThrough },
+      { name: 'validThrough', valueString: extension.validThrough },
+      { name: 'extensionReceiptId', valueString: extension.extensionReceiptId },
+      { name: 'claimIdentifier', valueString: record.claimIdentifier },
+      { name: 'simulated', valueBoolean: true },
+    ],
+  }
+}
+
+/**
+ * Deletes the payer's record for one business identifier.
+ *
+ * Demo/test fixture use only, and reachable only through the payer's env-gated
+ * demo route. This exists because the payer's duplicate-collapse is deliberate
+ * and permanent: a replayed identifier returns the ORIGINAL decision forever,
+ * so re-running the canonical demo requires explicitly clearing the prior
+ * transaction rather than hoping the payer re-decides.
+ */
+export async function purgeSubmission(identifier) {
+  await docRef(identifier).delete()
 }

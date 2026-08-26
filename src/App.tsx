@@ -1,242 +1,216 @@
-// Diagnostic UI. Intentionally unstyled beyond legibility.
+// The WellAuth authorization workspace.
 //
-// This component holds NO workflow state. It renders whatever /api/state
-// returns, so a reload reconstructs the page from server truth alone.
+// This component holds NO workflow state. Everything it renders comes from the
+// server snapshot, so a reload reconstructs the page -- and the WebMCP
+// capability inventory -- from backend truth alone. React never decides what
+// state the workflow is in, never guesses a payer outcome, and never shows a
+// success before the backend has committed it.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  approvePacket,
-  fetchState,
-  resetWorkflow,
-  type ServerSnapshot,
+  approveRemediation,
+  approveSubmission,
+  ensureWorkflow,
+  fetchDisclosure,
+  fetchSnapshot,
+  type Disclosure,
+  type Snapshot,
 } from './capabilities'
-import {
-  browserToolNames,
-  isWebMcpAvailable,
-  registeredToolNames,
-  setInvocationListener,
-  syncTools,
-  type InvocationLog,
-} from './webmcp'
+import { registeredToolNames, setSnapshot, syncTools } from './webmcp'
+import { Activity, buildActivity } from './Activity'
+import { Assistant } from './Assistant'
+import { LowerRegion } from './LowerRegion'
+import { Requirements } from './Requirements'
 
-const mono: React.CSSProperties = { fontFamily: 'ui-monospace, monospace' }
+const fmtDate = (iso?: string | null) => {
+  if (!iso) return '—'
+  const d = new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso)
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
+const fmtScheduled = (iso?: string | null) => {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleString('en-US', {
+    month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC',
+  }).replace(',', ' ·')
+}
+
+/** Human-facing status for the context band. Never color-only. */
+function authorizationStatus(s: Snapshot): string {
+  const phase = s.act2?.phase
+  if (phase === 'AUTHORIZATION_ALIGNED') return 'Authorized · covers scheduled date'
+  if (phase === 'REMEDIATION_SUBMITTED') return 'Extension pending'
+  if (phase === 'REMEDIATION_APPROVED') return 'Extension approved for submission'
+  if (phase === 'REMEDIATION_PREPARED') return 'Extension awaiting approval'
+  if (phase === 'PAYER_APPROVED_COVERAGE_GAP') return 'Approved · does not cover scheduled date'
+  if (s.submission?.state === 'COMPLETE' && s.submission.payerStatus === 'denied') {
+    return 'Denied by simulated payer'
+  }
+  if (s.submission) return 'Submitted · pending'
+  if (s.state === 'APPROVED') return 'Approved for submission'
+  if (s.state === 'PREPARED_AWAITING_APPROVAL') return 'Awaiting workforce approval'
+  return 'Prior authorization required'
+}
 
 export default function App() {
-  const [snapshot, setSnapshot] = useState<ServerSnapshot | null>(null)
+  const [snap, setSnap] = useState<Snapshot | null>(null)
+  const [disclosure, setDisclosure] = useState<Disclosure | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [invocation, setInvocation] = useState<InvocationLog | null>(null)
-  const [registered, setRegistered] = useState<string[]>([])
-  const [browserTools, setBrowserTools] = useState<string[] | null>(null)
-  const webmcp = isWebMcpAvailable()
-
-  // Kept in a ref so tool `execute` closures always reach the current refresh.
+  const [busy, setBusy] = useState(false)
+  const [unlockCue, setUnlockCue] = useState<string | null>(null)
+  const prevTools = useRef<string[]>([])
   const refreshRef = useRef<() => void>(() => {})
 
   const refresh = useCallback(async () => {
-    // Fetching state and registering tools fail for unrelated reasons; keeping
-    // the catches separate stops a registration bug from being misreported as
-    // an unreachable backend.
-    let next: ServerSnapshot
+    let next: Snapshot
     try {
-      next = await fetchState()
+      await ensureWorkflow()
+      next = await fetchSnapshot()
     } catch {
-      setError('Cannot reach backend. Run: npm run server')
+      setError('Cannot reach the WellAuth provider service.')
       return
     }
-    setSnapshot(next)
+    if ((next as unknown as { code?: string }).code) {
+      setError(`Provider refused: ${(next as unknown as { code: string }).code}`)
+      return
+    }
     setError(null)
+    setSnap(next)
+    setSnapshot(next)
+
+    // A newly available capability is the demo's hero beat, so it is surfaced
+    // as a transient cue -- derived from the SERVER's list, not predicted.
+    const gained = next.availableTools.filter((t) => !prevTools.current.includes(t))
+    const hero = gained.find((t) =>
+      ['prepare_prior_authorization', 'submit_prior_authorization',
+       'resolve_authorization_window', 'submit_authorization_extension'].includes(t))
+    if (hero && prevTools.current.length > 0) setUnlockCue(hero)
+    prevTools.current = next.availableTools
 
     try {
       await syncTools(next.availableTools, () => refreshRef.current())
     } catch (e) {
       setError(`WebMCP registration failed: ${e instanceof Error ? e.message : String(e)}`)
     }
-    setRegistered(registeredToolNames())
-    setBrowserTools(await browserToolNames())
+
+    setDisclosure(
+      next.state === 'PREPARED_AWAITING_APPROVAL' || next.state === 'APPROVED'
+        ? await fetchDisclosure()
+        : null,
+    )
   }, [])
 
   refreshRef.current = refresh
 
+  useEffect(() => { void refresh() }, [refresh])
+
   useEffect(() => {
-    setInvocationListener(setInvocation)
-    void refresh()
-  }, [refresh])
+    if (!unlockCue) return
+    const t = setTimeout(() => setUnlockCue(null), 6000)
+    return () => clearTimeout(t)
+  }, [unlockCue])
 
   const act = async (fn: () => Promise<unknown>) => {
-    await fn()
-    await refresh()
+    setBusy(true)
+    try {
+      const r = (await fn()) as { code?: string; message?: string }
+      // The backend's refusal is shown as-is. React never papers over it.
+      if (r?.code) setError(`${r.code}: ${r.message ?? ''}`)
+      await refresh()
+    } finally {
+      setBusy(false)
+    }
   }
 
-  if (error) {
+  if (error && !snap) {
     return (
-      <main style={{ padding: 24, ...mono }}>
-        <h1>WellAuth WebMCP Probe</h1>
-        <p style={{ color: 'crimson' }}>{error}</p>
-      </main>
+      <>
+        <Masthead />
+        <div className="loading">
+          <p className="err">{error}</p>
+        </div>
+      </>
     )
   }
 
-  if (!snapshot) {
+  if (!snap) {
     return (
-      <main style={{ padding: 24, ...mono }}>
-        <h1>WellAuth WebMCP Probe</h1>
-        <p>Loading authoritative state…</p>
-      </main>
+      <>
+        <Masthead />
+        <p className="loading">Loading authoritative state…</p>
+      </>
     )
   }
 
-  const { order, preparedPacket, approval } = snapshot
-  // Divergence between what we registered and what the browser reports is a
-  // hard failure of the whole thesis, so it is surfaced loudly.
-  const drift =
-    browserTools !== null && browserTools.join(',') !== [...registered].sort().join(',')
+  const service = snap.order?.service?.display ?? 'Cardiac MRI with contrast'
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, ...mono }}>
-      <h1>WellAuth WebMCP Probe</h1>
+    <>
+      <Masthead />
+      <div className="workspace">
+        <main>
+          <section className="panel context" aria-label="Authorization context">
+            <div className="cell">
+              <div className="label">Ordered service</div>
+              <div className="value lg">{service}</div>
+            </div>
+            <div className="cell">
+              <div className="label">Patient</div>
+              <div className="value">
+                J. Alvarez
+                <span className="sub">Synthetic record</span>
+              </div>
+            </div>
+            <div className="cell">
+              <div className="label">Scheduled</div>
+              <div className="value" data-testid="scheduled">
+                {fmtScheduled(snap.order?.scheduled)}
+              </div>
+            </div>
+            <div className="cell">
+              <div className="label">Payer</div>
+              <div className="value">
+                {snap.payer}
+                <span className="sub">Simulated</span>
+              </div>
+            </div>
+            <div className="cell">
+              <div className="label">Authorization status</div>
+              <div className="value" data-testid="auth-status">{authorizationStatus(snap)}</div>
+            </div>
+          </section>
 
-      <section>
-        <h3>Workflow state</h3>
-        <p style={{ fontSize: 20 }}>
-          <code data-testid="workflow-state">{snapshot.workflowState}</code>{' '}
-          <small>(revision {snapshot.revision})</small>
-        </p>
-      </section>
+          <Requirements snap={snap} />
 
-      <section>
-        <h3>Order</h3>
-        <ul>
-          <li>Patient: {order.patientId}</li>
-          <li>Order: {order.orderId}</li>
-          <li>Service: {order.orderedService} ({order.serviceCode})</li>
-          <li>Status: {order.status}</li>
-          <li>
-            Prior authorization required:{' '}
-            <strong>{order.priorAuthorizationRequired ? 'YES' : 'no'}</strong>
-          </li>
-        </ul>
-      </section>
+          <LowerRegion
+            snap={snap}
+            disclosure={disclosure}
+            busy={busy}
+            fmtDate={fmtDate}
+            onApproveSubmission={() =>
+              act(() => approveSubmission(snap.revision, snap.packetHash ?? ''))}
+            onApproveRemediation={() =>
+              act(() => approveRemediation(snap.revision, snap.remediation?.hash ?? ''))}
+          />
 
-      <section>
-        <h3>
-          Payer requirements{' '}
-          <span data-testid="satisfied-count">
-            {snapshot.satisfiedCount} / {snapshot.requirementCount} satisfied
-          </span>
-        </h3>
-        {snapshot.requirements.length === 0 ? (
-          <p>
-            <em>Not yet discovered. Ask the agent to discover coverage requirements.</em>
-          </p>
-        ) : (
-          <ol>
-            {snapshot.requirements.map((r) => (
-              <li key={r.id}>
-                [{r.satisfied ? 'x' : ' '}] {r.id} — {r.label}
-                {r.boundEvidenceId && <> · bound: <code>{r.boundEvidenceId}</code></>}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+          {error && <p className="err" role="alert">{error}</p>}
+        </main>
 
-      <section>
-        <h3>
-          Agent Access:{' '}
-          <span data-testid="capability-count">{snapshot.availableTools.length} capabilities</span>
-        </h3>
-        {!webmcp && (
-          <p style={{ color: 'darkorange' }}>
-            WebMCP not detected in this browser. The list below is the server's
-            authoritative inventory; nothing is registered.
-          </p>
-        )}
-        <ul data-testid="capability-list">
-          {snapshot.availableTools.map((t) => (
-            <li key={t}><code>{t}</code></li>
-          ))}
-        </ul>
-        <p>
-          Registered with browser: <code>{registered.join(', ') || '(none)'}</code>
-        </p>
-        <p>
-          Browser <code>getTools()</code> reports:{' '}
-          <code>{browserTools ? browserTools.join(', ') || '(none)' : 'unavailable'}</code>
-        </p>
-        {drift && (
-          <p style={{ color: 'crimson', fontWeight: 'bold' }} data-testid="drift-warning">
-            DRIFT DETECTED — registered set does not match browser inventory.
-          </p>
-        )}
-      </section>
+        <aside>
+          <Assistant snap={snap} unlockCue={unlockCue} registered={registeredToolNames()} />
+          <Activity events={buildActivity(snap)} />
+        </aside>
+      </div>
+    </>
+  )
+}
 
-      {preparedPacket && (
-        <section style={{ border: '2px solid #333', padding: 12 }}>
-          <h3>Prepared packet — awaiting human approval</h3>
-          <ul>
-            <li>Destination payer: {preparedPacket.destinationPayer}</li>
-            <li>Packet hash: <code>{preparedPacket.packetHash}</code></li>
-            <li>Prepared at revision: {preparedPacket.preparedAtRevision}</li>
-            <li>Complete: {preparedPacket.complete ? 'yes' : 'no'}</li>
-          </ul>
-          <h4>Proposed disclosure (minimum necessary)</h4>
-          <ol>
-            {preparedPacket.proposedDisclosure.map((d) => (
-              <li key={d.requirementId}>
-                {d.requirementLabel} → <code>{d.evidenceId}</code> {d.evidenceTitle}
-              </li>
-            ))}
-          </ol>
-          {!approval && (
-            <button
-              data-testid="approve-button"
-              onClick={() => void act(() => approvePacket(preparedPacket.packetHash))}
-            >
-              Approve submission
-            </button>
-          )}
-        </section>
-      )}
-
-      {approval && (
-        <section style={{ border: '2px solid green', padding: 12 }}>
-          <h3 data-testid="approved-banner">APPROVED FOR SUBMISSION</h3>
-          <ul>
-            <li>Approved packet hash: <code>{approval.approvedPacketHash}</code></li>
-            <li>Approved at revision: {approval.approvedAtRevision}</li>
-            <li>Approved by: {approval.approvedBy}</li>
-          </ul>
-          <p>
-            <em>
-              Gate 0: <code>submit_prior_authorization</code> is now registered but returns
-              NOT_IMPLEMENTED_GATE_0.
-            </em>
-          </p>
-        </section>
-      )}
-
-      <section>
-        <h3>Latest WebMCP invocation</h3>
-        {invocation ? (
-          <>
-            <p>
-              <code data-testid="last-invocation">{invocation.tool}</code> at {invocation.at}
-            </p>
-            <p>input:</p>
-            <pre>{JSON.stringify(invocation.input, null, 2)}</pre>
-            <p>result:</p>
-            <pre data-testid="last-result">{JSON.stringify(invocation.result, null, 2)}</pre>
-          </>
-        ) : (
-          <p><em>No tool has been invoked yet.</em></p>
-        )}
-      </section>
-
-      <section>
-        <h3>Operator controls (not agent-accessible)</h3>
-        <button onClick={() => void act(resetWorkflow)}>Reset workflow</button>{' '}
-        <button onClick={() => void refresh()}>Refresh from server</button>
-      </section>
-    </main>
+function Masthead() {
+  return (
+    <header className="masthead">
+      <div className="wordmark">Well<span>Auth</span></div>
+      <div className="env">Synthetic data · Simulated payer</div>
+    </header>
   )
 }

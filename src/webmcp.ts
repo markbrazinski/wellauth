@@ -8,7 +8,17 @@
 //  - `execute` returns a plain JSON-serializable value, not MCP content blocks;
 //  - the browser fires `toolchange` automatically -- pages do not notify.
 
-import { TOOL_REGISTRY, type ToolDef } from './capabilities'
+import { TOOL_REGISTRY, type Snapshot, type ToolDef } from './capabilities'
+
+/**
+ * The latest server snapshot. Tool `execute` closures read it for
+ * `expected_revision`, so a tool call always asserts the revision the SERVER
+ * last reported rather than one the client remembered from registration time.
+ */
+let currentSnapshot: Snapshot | null = null
+export function setSnapshot(s: Snapshot): void {
+  currentSnapshot = s
+}
 
 interface ModelContextLike {
   registerTool: (
@@ -79,7 +89,7 @@ async function registerOne(def: ToolDef, refresh: () => void): Promise<void> {
         inputSchema: def.inputSchema,
         annotations: { readOnlyHint: def.readOnlyHint },
         execute: async (input: Record<string, unknown>) => {
-          const result = await def.execute(input ?? {})
+          const result = await def.execute(input ?? {}, currentSnapshot as Snapshot)
           // A tool call may have advanced server state; re-read it so the page
           // reflects the new authoritative truth without a reload.
           refresh()

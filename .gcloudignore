@@ -1,6 +1,4 @@
 .git
 node_modules
 dist
-src
-test
 docs

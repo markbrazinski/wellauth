@@ -267,9 +267,16 @@ export async function getWorkflow(workflowId) {
           payerStatus: d.submission.payerStatus ?? null,
           startedAt: d.submission.startedAt,
           completedAt: d.submission.completedAt ?? null,
+          // The authorization validity window the payer granted. Act II's
+          // coverage evaluation reads this, so it must survive the bounded
+          // projection -- the rest of the receipt deliberately does not.
+          authorizationPeriod: d.submission.receipt?.preAuthPeriod ?? null,
+          payerReference: d.submission.receipt?.payerReference ?? null,
           simulated: true,
         }
       : null,
+    // Act II remediation record, raw. index.js projects it for the wire.
+    remediation: d.remediation ?? null,
     bindings: bindings.docs
       .map((b) => b.data())
       .sort((a, z) => a.requirementId.localeCompare(z.requirementId))

@@ -95,12 +95,13 @@ async function payerIdToken(audience) {
  *   rejected  : payer explicitly refused BEFORE recording (4xx validation)
  *   unknown   : socket died, timed out, or returned something unreadable
  */
-async function transmit({ bundle, mode, correlationId }) {
+export async function transmit({ bundle, mode, correlationId, path = '/Claim/$submit',
+                          contentType = 'application/fhir+json', unwrap = extractClaimResponse }) {
   if (!PAYER_BASE_URL) {
     throw new DomainError('PAYER_UNAVAILABLE', 'No payer destination is configured',
       { retryable: true })
   }
-  const url = `${PAYER_BASE_URL}/Claim/$submit`
+  const url = `${PAYER_BASE_URL}${path}`
 
   // Mint the credential BEFORE arming the timeout. The first token mint of a
   // process can take >13s (ADC discovery), and if that ran inside the timeout
@@ -130,8 +131,8 @@ async function transmit({ bundle, mode, correlationId }) {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/fhir+json',
-        Accept: 'application/fhir+json',
+        'Content-Type': contentType,
+        Accept: contentType,
         'X-Correlation-Id': correlationId,
         // Test-only scenario selector. Never derived from clinical content.
         ...(mode ? { 'X-Payer-Sim-Mode': mode } : {}),
@@ -178,11 +179,11 @@ async function transmit({ bundle, mode, correlationId }) {
   // PAS returns a response Bundle wrapping the ClaimResponse. Unwrap to the
   // decision resource; anything we cannot unwrap tells us nothing about
   // acceptance and must stay ambiguous rather than be optimistically accepted.
-  const claimResponse = extractClaimResponse(body)
-  if (!claimResponse) {
+  const decision = unwrap(body)
+  if (!decision) {
     return { classification: 'unknown', reason: 'unexpected-response-shape', status: res.status }
   }
-  return { classification: 'accepted', status: res.status, body: claimResponse, envelope: body }
+  return { classification: 'accepted', status: res.status, body: decision, envelope: body }
 }
 
 // ---------------------------------------------------------------------------

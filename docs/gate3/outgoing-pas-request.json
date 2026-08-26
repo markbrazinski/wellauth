@@ -1,6 +1,6 @@
 {
   "resourceType": "Bundle",
-  "id": "wellauth-pa-bundle-f0e67b00d38aa177",
+  "id": "wellauth-pa-bundle-b49e226464d9247d",
   "meta": {
     "tag": [
       {
@@ -11,12 +11,12 @@
     ]
   },
   "type": "collection",
-  "timestamp": "2026-08-26T18:48:19.757Z",
+  "timestamp": "2026-08-26T21:48:23.068Z",
   "entry": [
     {
       "resource": {
         "resourceType": "Claim",
-        "id": "wellauth-pa-f0e67b00d38aa177",
+        "id": "wellauth-pa-b49e226464d9247d",
         "meta": {
           "tag": [
             {
@@ -29,7 +29,7 @@
         "identifier": [
           {
             "system": "urn:wellauth:claim",
-            "value": "WA-wf-wellauth-001-f0e67b00d38aa177809eadc6"
+            "value": "WA-wf-wellauth-001-b49e226464d9247d2c4a60a3"
           }
         ],
         "status": "active",
@@ -46,7 +46,7 @@
         "patient": {
           "reference": "Patient/wellauth-patient-001"
         },
-        "created": "2026-08-26T18:48:19.757Z",
+        "created": "2026-08-26T21:48:23.068Z",
         "provider": {
           "reference": "Organization/wellauth-org-clinic"
         },
@@ -84,7 +84,7 @@
               "text": "req-001"
             },
             "valueReference": {
-              "reference": "Condition/wellauth-condition-001"
+              "reference": "Condition/wellauth-condition-002"
             }
           },
           {
@@ -170,7 +170,7 @@
               ],
               "text": "Cardiac MRI with contrast"
             },
-            "servicedDate": "2026-09-15",
+            "servicedDate": "2026-09-18",
             "provider": {
               "reference": "Organization/wellauth-org-clinic"
             },
@@ -224,7 +224,7 @@
         ],
         "resourceType": "Patient",
         "meta": {
-          "versionId": "MTc4Nzc0ODU4Mjc0MzQ0ODAwMA"
+          "versionId": "MTc4Nzc4MDA2Njc4NDg1MTAwMA"
         }
       }
     },
@@ -252,7 +252,7 @@
         ],
         "resourceType": "Practitioner",
         "meta": {
-          "versionId": "MTc4Nzc0ODU4MzY5MTY4NzAwMA"
+          "versionId": "MTc4Nzc4MDA2Nzc0MzQ0NDAwMA"
         }
       }
     },
@@ -293,7 +293,7 @@
           }
         ],
         "meta": {
-          "versionId": "MTc4Nzc0ODU4NDE2MDE0MTAwMA"
+          "versionId": "MTc4Nzc4MDA2ODIyMDExNDAwMA"
         }
       }
     },
@@ -315,7 +315,7 @@
           }
         ],
         "meta": {
-          "versionId": "MTc4Nzc0ODU4NDAwODE5NTAwMA"
+          "versionId": "MTc4Nzc4MDA2ODA2NjU1NTAwMA"
         }
       }
     },
@@ -337,7 +337,7 @@
           }
         ],
         "meta": {
-          "versionId": "MTc4Nzc0ODU4Mzg1Nzc1MjAwMA"
+          "versionId": "MTc4Nzc4MDA2NzkwODk3MTAwMA"
         }
       }
     },
@@ -369,22 +369,12 @@
           ]
         },
         "meta": {
-          "versionId": "MTc4Nzc3MDAxMDM0MTE3MjAwMA"
+          "versionId": "MTc4Nzc4MDc4MjEwNzAwMjAwMA"
         }
       }
     },
     {
       "resource": {
-        "category": [
-          {
-            "coding": [
-              {
-                "code": "encounter-diagnosis",
-                "system": "http://terminology.hl7.org/CodeSystem/condition-category"
-              }
-            ]
-          }
-        ],
         "clinicalStatus": {
           "coding": [
             {
@@ -396,16 +386,16 @@
         "code": {
           "coding": [
             {
-              "code": "29857009",
-              "display": "Chest pain",
+              "code": "267036007",
+              "display": "Dyspnea",
               "system": "http://snomed.info/sct"
             }
           ],
-          "text": "Exertional chest pain"
+          "text": "Dyspnea on exertion"
         },
-        "id": "wellauth-condition-001",
-        "onsetDateTime": "2026-07-02",
-        "recordedDate": "2026-07-20",
+        "id": "wellauth-condition-002",
+        "onsetDateTime": "2026-07-05",
+        "recordedDate": "2026-07-22",
         "resourceType": "Condition",
         "subject": {
           "reference": "Patient/wellauth-patient-001"
@@ -419,7 +409,7 @@
           ]
         },
         "meta": {
-          "versionId": "MTc4Nzc1Nzg0OTkwOTYzNjAwMA"
+          "versionId": "MTc4Nzc4MDA2ODU3ODk3MDAwMA"
         }
       }
     },
@@ -461,7 +451,7 @@
           "reference": "Patient/wellauth-patient-001"
         },
         "meta": {
-          "versionId": "MTc4Nzc2OTk5MTM2NTA0NTAwMA"
+          "versionId": "MTc4Nzc4MDc1MTI5ODEwMTAwMA"
         }
       }
     },
@@ -511,7 +501,57 @@
           "text": "Cardiology consult note - conservative therapy trial outcome"
         },
         "meta": {
-          "versionId": "MTc4Nzc2MjI4NTYyNzI5NjAwMA"
+          "versionId": "MTc4Nzc4MDA3MDMzNTg2NjAwMA"
+        }
+      }
+    },
+    {
+      "resource": {
+        "category": [
+          {
+            "coding": [
+              {
+                "code": "encounter-diagnosis",
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category"
+              }
+            ]
+          }
+        ],
+        "clinicalStatus": {
+          "coding": [
+            {
+              "code": "active",
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "code": "29857009",
+              "display": "Chest pain",
+              "system": "http://snomed.info/sct"
+            }
+          ],
+          "text": "Exertional chest pain"
+        },
+        "id": "wellauth-condition-001",
+        "onsetDateTime": "2026-07-02",
+        "recordedDate": "2026-07-20",
+        "resourceType": "Condition",
+        "subject": {
+          "reference": "Patient/wellauth-patient-001"
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "code": "confirmed",
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status"
+            }
+          ]
+        },
+        "meta": {
+          "versionId": "MTc4Nzc4MDA2ODQwNjIyNjAwMA"
         }
       }
     }
