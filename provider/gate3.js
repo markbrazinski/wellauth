@@ -827,6 +827,39 @@ check('P0.21 payer uses a SEPARATE Firestore database from the provider',
   (process.env.PAYER_FIRESTORE_DATABASE ?? 'wellauth-payer') !==
   (process.env.FIRESTORE_DATABASE ?? 'wellauth-workflow'))
 
+// The boundary must be enforced by IAM, not merely by naming two databases.
+// Impersonate the PAYER identity and prove it cannot read workflow truth.
+const PAYER_SA = 'wellauth-payer-sa@preflight-hackathon.iam.gserviceaccount.com'
+const crossRead = await (async () => {
+  try {
+    const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] })
+    const client = await auth.getClient()
+    const minted = await client.request({
+      url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${PAYER_SA}:generateAccessToken`,
+      method: 'POST',
+      data: { scope: ['https://www.googleapis.com/auth/cloud-platform'], lifetime: '300s' },
+    })
+    const tok = minted.data.accessToken
+    const foreign = await fetch(
+      'https://firestore.googleapis.com/v1/projects/preflight-hackathon/databases/' +
+      `${process.env.FIRESTORE_DATABASE ?? 'wellauth-workflow'}/documents/wellauth_workflows/${W}`,
+      { headers: { Authorization: `Bearer ${tok}` } })
+    const own = await fetch(
+      'https://firestore.googleapis.com/v1/projects/preflight-hackathon/databases/' +
+      `${process.env.PAYER_FIRESTORE_DATABASE ?? 'wellauth-payer'}/documents/northstar_submissions`,
+      { headers: { Authorization: `Bearer ${tok}` } })
+    return { foreign: foreign.status, own: own.status }
+  } catch (e) { return { skipped: e.message?.slice(0, 60) } }
+})()
+if (crossRead.skipped) {
+  console.log(`  (payer SA impersonation unavailable: ${crossRead.skipped})`)
+} else {
+  check('P0.21 payer identity is DENIED the provider workflow database',
+    crossRead.foreign === 403, `got ${crossRead.foreign}`)
+  check('P0.21 payer identity CAN read its own database',
+    crossRead.own === 200, `got ${crossRead.own}`)
+}
+
 // --- P0.22 ----------------------------------------------------------------
 section('P0.22  Logging hygiene')
 const logBlob = logLines.join('\n')
