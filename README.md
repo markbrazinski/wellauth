@@ -1,93 +1,255 @@
-# WellAuth — WebMCP capability-lifecycle probe (Gate 0)
+# WellAuth
 
-A minimal probe proving one thing: **a browser agent can discover and invoke a
-web page's WebMCP capabilities, and the page can reliably add and remove those
-capabilities as server-authoritative workflow state changes.**
+**A WebMCP-enabled prior-authorization application.**
 
-This is not the product. There is no FHIR, no cloud healthcare API, no real
-payer, no LLM, no database, and no authentication. All data is deterministic
-synthetic fixtures. No PHI.
+> The healthcare application exposes exactly the capabilities an agent may use
+> at each workflow state, while authoritative clinical truth, workflow policy,
+> and human submission authority remain outside the model.
 
-## What it demonstrates
+**Live demo:** https://wellauth-provider-qxqdngmwjq-uc.a.run.app
 
-A prior-authorization workflow where the agent's available tools change as the
-workflow advances, and where **the page itself visibly advances** as a result of
-agent tool calls — not just the chat transcript.
+---
 
-| Workflow state | Registered capabilities |
-| --- | --- |
-| `CONTEXT_READY` | 2 — `get_order_context`, `discover_coverage_requirements` |
-| `REQUIREMENTS_RESOLVED` | 5 — adds `find_supporting_evidence`, `inspect_evidence`, `bind_evidence` |
-| `PACKET_COMPLETE` | 6 — adds `prepare_prior_authorization` |
-| `PREPARED_AWAITING_APPROVAL` | 5 — **no** agent capability advances the workflow |
-| `APPROVED` | 6 — adds `submit_prior_authorization` |
+## Synthetic data statement
 
-Two properties are the point:
+This demonstration uses entirely synthetic health data. Its authorization,
+disclosure, audit, and infrastructure boundaries are designed around a credible
+HIPAA-regulated deployment model, but **no claim of HIPAA compliance is made.**
 
-1. **`PREPARED_AWAITING_APPROVAL` has no forward capability.** A prepared packet
-   can only be advanced by a human clicking *Approve submission*. No WebMCP tool
-   in any state can perform the approval.
-2. **Capability changes are real.** Removal aborts the registration, so removed
-   tools disappear from `document.modelContext.getTools()` and stale handles
-   throw on invocation. Nothing here is a UI label.
+**Northstar Health Plan is fictional.** Every payer interaction is with a
+clearly labelled **simulated payer** running as a separate service. No real
+payer, payer network, clearinghouse, or X12 transaction is involved.
+
+---
+
+## The demo in one paragraph
+
+A cardiac MRI with contrast is already ordered and scheduled for September 18.
+Prior authorization is blocking it. A browser agent uses WellAuth's
+state-specific WebMCP capabilities to discover the payer's five requirements,
+locate existing authoritative evidence in the FHIR record, attach that evidence
+to exact requirements, and prepare the exact proposed disclosure — then
+**stops**, because it has no capability to submit. A workforce user reviews the
+disclosure and clicks **Approve submission**. Only then does
+`submit_prior_authorization` appear in the browser's tool inventory. The agent
+submits exactly one request to the simulated payer, which **approves** it — but
+with a validity window ending September 12, six days before the scheduled MRI.
+WellAuth detects that administrative mismatch and unlocks a new capability,
+**Resolve authorization window**. The same human gate repeats for the extension,
+and the workflow ends at `AUTHORIZATION_ALIGNED` with the MRI covered.
+
+---
+
+## Judge testing instructions
+
+No account. No setup wizard. No terminal steps.
+
+### 1. Open the app
+
+https://wellauth-provider-qxqdngmwjq-uc.a.run.app
+
+You should immediately see the authorization workspace: **Cardiac MRI with
+contrast**, scheduled **September 18 at 9:30 AM**, payer **Northstar Health
+Plan**, status **Prior authorization required**.
+
+If a previous visitor left the demo mid-flow, reset it:
+
+```sh
+curl -X POST https://wellauth-provider-qxqdngmwjq-uc.a.run.app/demo/reset
+```
+
+### 2. Point a browser agent at the page
+
+Use ChatGPT Desktop's browser/site-tools capability, or a Chrome build with
+native WebMCP. In native Chrome you can watch the tool inventory directly in
+**DevTools → Application → WebMCP**.
+
+### 3. Canonical prompt
+
+> Get this MRI ready for prior authorization using the evidence already
+> available. Do not create or infer missing clinical evidence, and do not submit
+> anything unless the workflow is complete and a human has approved it. Stop
+> when human approval is required.
+
+Expected: the agent inspects the order, discovers requirements, searches and
+attaches evidence, reaches 4 of 5, locates the fifth through a different
+bounded search path, reaches 5 of 5, prepares the submission — and stops. The
+page changes visibly at every step.
+
+### 4. The human step
+
+Click **Approve submission**. Watch `submit_prior_authorization` appear in the
+browser's tool inventory without a reload.
+
+If your client needs a new turn to continue:
+
+> Continue now that I have approved the submission.
+
+### 5. Act II
+
+The simulated payer approves, but the authorization ends September 12 and the
+MRI is September 18. A new capability, **Resolve authorization window**,
+appears. Let the agent prepare the extension, click **Approve extension
+request**, and let it submit. The workflow ends with the MRI covered.
+
+### What to try breaking
+
+- Ask the agent to submit before you approve — the tool does not exist, and the
+  underlying route refuses with `APPROVAL_REQUIRED`.
+- Ask it to change the ordered service or write a missing diagnosis — no such
+  capability exists.
+- Reload at any point — the page and the tool inventory rebuild from the
+  backend.
+
+---
 
 ## Architecture
 
-The browser holds **no** workflow state. A separate Node process is the
-authority; the page renders whatever `GET /api/state` returns and registers
-exactly the tools that response lists.
-
-```
-browser ──WebMCP tool call──▶ tool proxies to HTTP ──▶ node server (authority)
-   ▲                                                          │
-   └───────── re-reads /api/state, re-syncs registrations ◀────┘
-```
-
-Because the registered set and the displayed set both derive from the same
-server field, UI state and WebMCP state cannot drift. A reload reconstructs
-everything from the server.
-
-The server refuses invalid operations (mismatched evidence, stale packet hash,
-incomplete packet) without advancing its revision counter, so the page cannot
-show progress that did not happen.
-
-## Running it
-
-```bash
-npm install
-npm run server   # authority on :8787
-npm run dev      # page on :5173
+```text
+Human ──approval controls──┐
+                           ▼
+                  WellAuth React UI
+                           │  native WebMCP (document.modelContext)
+                           ▼
+                    Browser agent
+                           │  bounded domain operations
+                           ▼
+              wellauth-provider (Cloud Run)      ← serves the UI, same origin
+                 ├── Cloud Healthcare API / FHIR R4   clinical source truth
+                 ├── Firestore wellauth-workflow      workflow authority
+                 └── authenticated submission (ID token)
+                           ▼
+          wellauth-payer-simulator (Cloud Run)   ← separate service + identity
+                 └── Firestore wellauth-payer         payer truth
 ```
 
-Open the page in a browser with WebMCP support (see below).
+The UI is served **by the provider itself**, so the page, the agent, and the
+workflow API share one origin: no CORS, no cross-origin cookie or WebMCP
+complexity, and one URL for a judge. The payer boundary stays real — separate
+service, separate service account, separate Firestore database, authenticated
+with a Cloud Run ID token.
 
-## Tests
+### Where truth lives
 
-```bash
-npm test         # 46 deterministic tests
+| Concern | Owner |
+|---|---|
+| Clinical facts | Cloud Healthcare FHIR R4 (provider identity is **read-only**) |
+| Workflow state, approvals, hashes | Firestore, transactional |
+| What the agent may do now | Provider capability document |
+| Payer decisions and validity | The payer simulator's own database |
+| Anything at all | **Never** React |
+
+---
+
+## WebMCP implementation
+
+Entry point is `document.modelContext`. Tools are registered imperatively;
+removal is via the `AbortSignal` passed at registration — there is no
+`unregisterTool`. `execute` returns plain structured JSON.
+
+The frontend never decides which tools exist. It synchronizes registrations
+from the server's `availableTools`, so the browser's inventory and the backend's
+state cannot drift.
+
+### Capability lifecycle
+
+| State | Browser-visible tools |
+|---|---|
+| `CONTEXT_READY` | `get_order_context`, `discover_coverage_requirements` |
+| `REQUIREMENTS_RESOLVED` | + `find_supporting_evidence`, `inspect_evidence`, `attach_evidence`, `remove_evidence` |
+| `PACKET_COMPLETE` | + `prepare_prior_authorization` |
+| `PREPARED_AWAITING_APPROVAL` | **no submission capability** |
+| `APPROVED` | + `submit_prior_authorization` |
+| submitted | − submit, + `check_authorization_status` |
+| `PAYER_APPROVED_COVERAGE_GAP` | + `resolve_authorization_window` |
+| `REMEDIATION_PREPARED` | **no submission capability** |
+| `REMEDIATION_APPROVED` | + `submit_authorization_extension` |
+| `AUTHORIZATION_ALIGNED` | status/read only |
+
+**A capability being absent is an affordance and an agent-safety signal, not a
+security boundary.** Every route independently re-validates state, revision,
+freshness, and authority. Both human approvals are workforce-gated HTTP routes
+and are deliberately never WebMCP tools.
+
+---
+
+## Browser requirements
+
+- A browser with WebMCP (`document.modelContext`), or ChatGPT Desktop's
+  browser/site-tools capability.
+- The page ships the `@mcp-b/webmcp-polyfill`, which defers to a native
+  implementation when present.
+- Desktop, optimized for **1600 × 900**.
+
+---
+
+## Test evidence
+
+```sh
+npm test                                                     # 69/69   unit
+npm run test:gate2                                           # 147/147 workflow
+PAYER_BASE_URL=<payer> npm run test:gate3                    # 188/188 submission
+PAYER_BASE_URL=<payer> npm run test:gate4                    # 99/99   integrated
+GATE4_BASE_URL=<provider> PAYER_BASE_URL=<payer> \
+  npm run test:gate4                                         # 99/99   deployed
+npm run test:browser                                         # 12/12   real browser
 ```
 
-- `test/state.test.js` — state machine, capability inventories, refusal paths
-- `test/http.test.js` — end-to-end over real HTTP, including reload recovery
-- `test/webmcp.test.js` — registration lifecycle against the real
-  `@mcp-b/webmcp-polyfill`, asserting on the browser's own `getTools()`
+The browser suite drives the deployed app in Chromium and asserts that the
+inventory matches the server, that a tool call visibly changes the page, that
+capabilities change without a reload, and that a reload reconstructs both.
 
-A browser smoke test driving real Chrome over CDP is described in
-[`docs/GATE-0-REPORT.md`](docs/GATE-0-REPORT.md).
+---
 
-## WebMCP notes
+## Standards claims
 
-Verified against the spec and a real implementation, August 2026:
+WellAuth **uses FHIR R4 (4.0.1)** resources. Requirement discovery is
+**informed by Da Vinci CRD concepts**; documentation assembly is
+**DTR-inspired**; the outgoing artifact is a **PAS-shaped** FHIR R4
+prior-authorization request that satisfies the cardinality and fixed-value
+constraints of the PAS 2.2.1 `profile-claim` and `profile-pas-request-bundle`,
+verified against the official package (`docs/GATE-3-PAS-VALIDATION.md`).
 
-- the entry point is `document.modelContext` — **not** `navigator.modelContext`
-  (deprecated alias) and not `window.agent` (dead);
-- there is no `unregisterTool()`, `provideContext()`, or `clearContext()`.
-  Removal is **only** via aborting an `AbortSignal` passed at register time;
-- there is no `outputSchema`; result shapes are validated by the application;
-- `execute` returns a plain JSON-serializable value, not MCP content blocks;
-- `executeTool(handle, input)` takes the input as a **JSON string**, not an object;
-- the browser fires `toolchange` automatically — pages do not notify.
+WellAuth does **not** claim: PAS/CRD/DTR conformance or certification, full IG
+validation, terminology conformance, SMART on FHIR, real payer connectivity,
+X12 278, clearinghouse integration, HIPAA compliance, or production readiness.
 
-## License
+The Act II authorization-window remediation is the canonical workflow of the
+**synthetic** Northstar simulator. It is **not** a claim that real payers expose
+a standardized authorization-extension transaction, nor that this exchange is a
+standardized Da Vinci PAS extension operation.
 
-Apache-2.0. See [LICENSE](LICENSE).
+---
+
+## Reset
+
+```sh
+curl -X POST <provider>/demo/reset
+```
+
+Restores the canonical initial state: purges the Firestore workflow, recreates
+it at `CONTEXT_READY`, and clears the payer's record for the prior claim
+identifier so a fresh decision is minted. It is gated behind
+`WELLAUTH_DEMO_RESET` and is **not** a WebMCP tool.
+
+To restore the FHIR fixture (write-capable credentials, never the provider
+identity):
+
+```sh
+npm run fhir:seed
+```
+
+---
+
+## Repository
+
+| Path | Purpose |
+|---|---|
+| `provider/` | Bounded domain API, workflow, submission, remediation, capabilities |
+| `payer/` | Simulated payer: `Claim/$submit`, `authorization-extension` |
+| `src/` | Authorization workspace + WebMCP registration |
+| `docs/` | Gate reports and validation records |
+
+Gate reports: [Gate 0](docs/GATE-0-REPORT.md) ·
+[Gate 2](docs/GATE-2-REPORT.md) · [Gate 3](docs/GATE-3-REPORT.md) ·
+[Gate 4](docs/GATE-4-REPORT.md)

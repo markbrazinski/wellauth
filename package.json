@@ -15,7 +15,8 @@
     "provider": "node provider/index.js",
     "test:gate2": "node provider/gate2.js",
     "test:gate3": "node provider/gate3.js",
-    "test:gate4": "node provider/gate4.js"
+    "test:gate4": "node provider/gate4.js",
+    "test:browser": "node browser-acceptance.mjs"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.0.0",
