@@ -21,11 +21,19 @@ PAS IG validation never produced a verdict (`GATE-3-PAS-VALIDATION.md`). It is
 scoped to a standards *claim*, not to any Gate 4 mechanism, and the claim
 language is bounded accordingly.
 
+Note for accuracy: `GATE-3-PAS-VALIDATION.md` §3.1 lists "returns a bare
+`ClaimResponse`" as a known deviation. A later Gate 3 commit (`108954a`,
+"return and ingest a PAS response Bundle") resolved it — the simulator now
+returns a PAS-shaped response Bundle and the provider unwraps it, accepting a
+bare `ClaimResponse` for older receipts. That deviation no longer applies; the
+remaining §3 items (no PAS extensions, no `meta.profile`, terminology
+unverified) still do.
+
 ## Repository
 
 | | |
 |---|---|
-| Starting SHA | `f7a5c6d` (accepted Gate 3 end) |
+| Starting SHA | `108954a` (accepted Gate 3 end) |
 | Ending SHA | `7d36687` + this report |
 | Working tree | clean |
 
@@ -238,8 +246,10 @@ canonical journey was driven twice, minting a fresh `NS-40192` each time.
 3. **The Gate 0 `server/` stub remains** as an isolated Gate 0 fixture so that
    suite keeps passing. It is not reachable from the product and is not
    deployed.
-4. **`docs/gate3/outgoing-pas-request.json` regenerated** by the Gate 3 suite,
-   now reflecting the canonical schedule. Content, not conclusions, changed.
+4. **`docs/gate3/outgoing-pas-request.json` is regenerated** by every Gate 3
+   run and now reflects the canonical Sep 18 schedule. It is checked in at its
+   Gate 3 content; re-running Gate 3 will dirty it. Content, not conclusions,
+   changes.
 
 ## Blockers
 
