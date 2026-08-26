@@ -82,9 +82,9 @@ function ReadyToPrepare() {
 function DisclosureReview({ snap, disclosure, busy, onApproveSubmission }: Props) {
   return (
     <Panel title="Proposed disclosure" attention>
-      <p style={{ margin: '0 0 12px', color: 'var(--ink-2)' }}>
-        This is the exact information that would be disclosed to{' '}
-        <strong>{snap.payer}</strong> for the purpose of prior-authorization review.
+      <p style={{ margin: '0 0 8px', color: 'var(--ink-2)', fontSize: 13 }}>
+        The exact information that would be disclosed to <strong>{snap.payer}</strong>{' '}
+        <span className="sim-banner">SIMULATED PAYER</span> for prior-authorization review.
       </p>
 
       {disclosure && (
@@ -108,18 +108,12 @@ function DisclosureReview({ snap, disclosure, busy, onApproveSubmission }: Props
         </div>
       </div>
 
-      <dl className="kv">
-        <dt>Destination</dt>
-        <dd>{snap.payer} <span className="sim-banner">SIMULATED PAYER</span></dd>
-        <dt>Purpose</dt>
-        <dd>Prior-authorization review</dd>
-        <dt>Packet hash</dt>
-        <dd style={{ fontFamily: 'var(--mono)', fontSize: 11.5, wordBreak: 'break-all' }}>
-          {snap.packetHash}
-        </dd>
-      </dl>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)',
+                    marginBottom: 10 }}>
+        packet {snap.packetHash?.slice(0, 30)}…
+      </div>
 
-      <div style={{ marginTop: 16 }}>
+      <div>
         <button
           className="approve"
           onClick={onApproveSubmission}

@@ -27,7 +27,11 @@ export function Requirements({ snap }: { snap: Snapshot }) {
 
       {snap.requirements.length === 0 ? (
         <p className="req-empty">
-          Requirements not yet discovered.
+          Payer requirements have not been discovered yet.
+          <br />
+          <span style={{ fontSize: 12.5 }}>
+            Ask the assistant to discover the coverage requirements for this order.
+          </span>
         </p>
       ) : (
         <div>
@@ -46,7 +50,13 @@ export function Requirements({ snap }: { snap: Snapshot }) {
                       <span className="dot">·</span>
                       <span>{b.resourceType}</span>
                       <span className="dot">·</span>
-                      <span>v{b.sourceVersionId}</span>
+                      {/* Cloud Healthcare version ids are long opaque base64.
+                          The exact value is what the backend binds and freezes;
+                          the UI shows a legible prefix so the provenance line
+                          stays readable at demo scale. */}
+                      <span title={b.sourceVersionId}>
+                        v{b.sourceVersionId.slice(-6)}
+                      </span>
                       <span className="dot">·</span>
                       <span className="by">attached by assistant</span>
                     </div>

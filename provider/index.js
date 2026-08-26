@@ -125,7 +125,12 @@ async function snapshot(workflowId) {
     order,
     scheduledServiceDate,
     scheduledServiceDisplay: fixture.SCHEDULED_SERVICE_DISPLAY,
-    requirements: service.getRequirements(workflowId).requirements,
+    // Only surfaced once the workflow has ACTUALLY resolved them. Returning
+    // the static policy list at CONTEXT_READY would make the page claim a
+    // discovery that never happened.
+    requirements: wf.state === 'CONTEXT_READY'
+      ? []
+      : service.getRequirements(workflowId).requirements,
     act2: { phase: act2.phase, alignment: act2.alignment },
     remediation: rem,
     availableTools: capabilitiesFor(wf, act2),

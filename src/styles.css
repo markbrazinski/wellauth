@@ -86,8 +86,8 @@ button { font: inherit; }
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 16px;
-  padding: 16px 20px 28px;
+  gap: 14px;
+  padding: 12px 20px 20px;
   max-width: 1600px;
   margin: 0 auto;
   align-items: start;
@@ -99,13 +99,13 @@ button { font: inherit; }
   border-radius: var(--radius);
 }
 
-.panel + .panel { margin-top: 14px; }
+.panel + .panel { margin-top: 11px; }
 
 .panel-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -118,7 +118,7 @@ button { font: inherit; }
   color: var(--ink-2);
 }
 
-.panel-body { padding: 14px; }
+.panel-body { padding: 12px 14px; }
 
 /* --- context band -------------------------------------------------------- */
 
@@ -128,7 +128,7 @@ button { font: inherit; }
 }
 
 .context .cell {
-  padding: 11px 14px;
+  padding: 9px 14px;
   border-right: 1px solid var(--line);
   min-width: 0;
 }
@@ -160,7 +160,7 @@ button { font: inherit; }
 .req {
   display: flex;
   gap: 11px;
-  padding: 11px 14px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--line);
 }
 .req:last-child { border-bottom: none; }
@@ -214,7 +214,7 @@ button { font: inherit; }
 .disclosure-item {
   display: flex;
   gap: 10px;
-  padding: 8px 0;
+  padding: 5px 0;
   border-bottom: 1px solid var(--line);
   font-size: 13px;
 }
@@ -230,8 +230,8 @@ button { font: inherit; }
   background: var(--surface-sunken);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 11px 13px;
-  margin: 12px 0;
+  padding: 9px 12px;
+  margin: 10px 0;
 }
 
 .kv { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 5px 14px; }

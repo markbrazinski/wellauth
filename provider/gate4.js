@@ -111,7 +111,8 @@ async function snapshot() {
       scheduledServiceDate: sched,
       act2,
       availableTools: capabilitiesFor(wf, act2),
-      requirements: service.getRequirements(W).requirements,
+      requirements: wf.state === 'CONTEXT_READY'
+        ? [] : service.getRequirements(W).requirements,
     },
   }
 }

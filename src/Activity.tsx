@@ -22,7 +22,10 @@ export function buildActivity(snap: Snapshot): Event[] {
   const out: Event[] = []
   const satisfied = snap.completeness.satisfied
 
-  if (snap.requirements.length > 0) {
+  // Keyed on the workflow having actually left CONTEXT_READY, not on the
+  // requirement list being non-empty -- the list is server policy and would
+  // otherwise assert a discovery that never occurred.
+  if (snap.state !== 'CONTEXT_READY') {
     out.push({ who: 'Assistant', what: 'Discovered payer requirements' })
   }
 
