@@ -36,6 +36,17 @@ const fmtScheduled = (iso?: string | null) => {
   }).replace(',', ' ·')
 }
 
+/**
+ * Is the payer holding an outcome we cannot cause? Pure and exported so the
+ * polling trigger is testable without rendering.
+ */
+export function awaitingPayer(s: Snapshot | null): boolean {
+  return (
+    s?.submission?.state === 'SUBMITTED_OR_PENDING' ||
+    s?.remediation?.submission?.outcome === 'pending'
+  )
+}
+
 /** Human-facing status for the context band. Never color-only. */
 function authorizationStatus(s: Snapshot): string {
   const phase = s.act2?.phase
@@ -104,6 +115,26 @@ export default function App() {
   refreshRef.current = refresh
 
   useEffect(() => { void refresh() }, [refresh])
+
+  // EXTERNAL UPDATE STRATEGY: bounded polling, and only while the payer owes
+  // us an outcome the browser cannot cause. The canonical simulator answers
+  // /submit synchronously, so this never fires on the demo path -- but
+  // SUBMITTED_OR_PENDING is a real reachable state, and without this the page
+  // would sit on "pending" forever with no way to learn the result.
+  //
+  // Polling, not SSE: one transition, on Cloud Run, does not justify holding
+  // server-side connection state. Revision changes are detected by refresh()
+  // replacing the snapshot wholesale, which re-syncs capabilities too.
+  //
+  // ponytail: fixed 5s, no backoff -- it stops on its own at a terminal state
+  // and the window is short. Add backoff if a real async payer ever lands.
+  const pending = awaitingPayer(snap)
+
+  useEffect(() => {
+    if (!pending) return
+    const t = setInterval(() => void refreshRef.current(), 5000)
+    return () => clearInterval(t)
+  }, [pending])
 
   useEffect(() => {
     if (!unlockCue) return

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { derivePosture, evaluateAlignment } from '../provider/remediation.js'
 import { EXTENDED_VALID_THROUGH, INITIAL_VALID_THROUGH, SCHEDULED_SERVICE_DATE }
   from '../provider/fixture.js'
+import { awaitingPayer } from '../src/App'
 
 describe('evaluateAlignment', () => {
   it('reports the canonical fixture as NOT covered', () => {
@@ -86,5 +87,37 @@ describe('derivePosture', () => {
                                     currentValidThrough: EXTENDED_VALID_THROUGH } },
       SCHEDULED_SERVICE_DATE,
     ).phase).toBe('AUTHORIZATION_ALIGNED')
+  })
+})
+
+// The page must keep polling exactly while the payer owes an outcome the
+// browser cannot cause -- and must stop at every terminal state, or the demo
+// machine sits in a refresh loop forever.
+describe('awaitingPayer (external-update polling trigger)', () => {
+  const snap = (extra) => ({ submission: null, remediation: null, ...extra })
+
+  it('does not poll before any submission exists', () => {
+    expect(awaitingPayer(snap({}))).toBe(false)
+    expect(awaitingPayer(null)).toBe(false)
+  })
+
+  it('polls while an Act I submission is pending', () => {
+    expect(awaitingPayer(snap({ submission: { state: 'SUBMITTED_OR_PENDING' } }))).toBe(true)
+  })
+
+  it('stops once the payer has decided', () => {
+    for (const payerStatus of ['approved', 'denied']) {
+      expect(awaitingPayer(snap({ submission: { state: 'COMPLETE', payerStatus } }))).toBe(false)
+    }
+  })
+
+  it('polls while an Act II extension is pending, and stops when it lands', () => {
+    const rem = (outcome) => snap({
+      submission: { state: 'COMPLETE', payerStatus: 'approved' },
+      remediation: { submission: { outcome } },
+    })
+    expect(awaitingPayer(rem('pending'))).toBe(true)
+    expect(awaitingPayer(rem('approved'))).toBe(false)
+    expect(awaitingPayer(rem(null))).toBe(false)
   })
 })
