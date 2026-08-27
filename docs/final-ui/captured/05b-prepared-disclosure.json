@@ -1,0 +1,72 @@
+{
+  "artifact": "WellAuthPreparedSubmission/1",
+  "workflowId": "wf-wellauth-001",
+  "requirementSetVersion": "northstar-cardiac-mri-v1",
+  "destination": "Northstar Health Plan",
+  "purpose": "prior-authorization-review",
+  "order": {
+    "resourceType": "ServiceRequest",
+    "id": "wellauth-order-001",
+    "versionId": "MTc4Nzc4MzU1NTAyNDU4OTAwMA"
+  },
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "wellauth-coverage-001",
+    "versionId": "MTc4Nzc4MzU3MDgxNzcxMDAwMA"
+  },
+  "patientContextRef": "Patient/wellauth-patient-001",
+  "items": [
+    {
+      "requirementId": "req-001",
+      "resourceType": "Condition",
+      "resourceId": "wellauth-condition-002",
+      "sourceVersionId": "MTc4Nzc4MDA2ODU3ODk3MDAwMA",
+      "inclusionReason": "satisfies:req-001:structured-resource-path"
+    },
+    {
+      "requirementId": "req-002",
+      "resourceType": "DiagnosticReport",
+      "resourceId": "wellauth-echo-001",
+      "sourceVersionId": "MTc4Nzc4MzU0MjI1NTE1ODAwMA",
+      "inclusionReason": "satisfies:req-002:structured-resource-path"
+    },
+    {
+      "requirementId": "req-003",
+      "resourceType": "DocumentReference",
+      "resourceId": "wellauth-doc-conservative-therapy",
+      "sourceVersionId": "MTc4Nzc4MDA3MDMzNTg2NjAwMA",
+      "inclusionReason": "satisfies:req-003:alternate-document-path"
+    },
+    {
+      "requirementId": "req-004",
+      "resourceType": "PractitionerRole",
+      "resourceId": "wellauth-practrole-001",
+      "sourceVersionId": "MTc4Nzc4MDA2ODIyMDExNDAwMA",
+      "inclusionReason": "satisfies:req-004:structured-resource-path"
+    },
+    {
+      "requirementId": "req-005",
+      "resourceType": "Coverage",
+      "resourceId": "wellauth-coverage-001",
+      "sourceVersionId": "MTc4Nzc4MzU3MDgxNzcxMDAwMA",
+      "inclusionReason": "satisfies:req-005:structured-resource-path"
+    }
+  ],
+  "exclusionPolicy": {
+    "version": "wellauth-minimum-necessary-v1",
+    "excludes": [
+      "unrelated-conditions",
+      "unrelated-encounters",
+      "unrelated-documents",
+      "other-patients",
+      "raw-clinical-narrative"
+    ]
+  },
+  "manifestRevision": 1,
+  "packetHash": "sha256:e80e62bf8aad42a415321a312088ac07285337f6f8cb058b13e9f78fe9644f10",
+  "preparedAt": "2026-08-27T01:31:11.454Z",
+  "preparedAtRevision": 8,
+  "state": "PREPARED_AWAITING_APPROVAL",
+  "currentPacketHash": "sha256:e80e62bf8aad42a415321a312088ac07285337f6f8cb058b13e9f78fe9644f10",
+  "correlationId": "1e489860-cedf-4fb3-a444-8c971ede79d6"
+}

@@ -1,9 +1,14 @@
-// The transforming submission / review region.
+// The transforming lower region.
 //
-// ONE region that changes shape with authoritative state. Future-state
-// components are never rendered simultaneously: there is no disabled submit
-// button standing in for a capability that does not exist, because the whole
-// point is that the capability is genuinely absent until a human acts.
+// Selection precedence is act2.phase -> submission -> state, which is the real
+// precedence in the backend: `state` stays APPROVED for the whole submission and
+// Act II lifecycle, because the approval is the thing being consumed. Reading
+// `state` first would strand the page on "Approved for submission" through the
+// entire payer exchange.
+//
+// Exactly two controls in here are human progression: Approve submission and
+// Approve extension request. Neither transmits. Agent capabilities are never
+// rendered as clickable buttons.
 
 import type { Disclosure, Snapshot } from './capabilities'
 
@@ -16,289 +21,501 @@ interface Props {
   onApproveRemediation: () => void
 }
 
+/** Short human reason from the frozen manifest's inclusionReason. */
+function reasonOf(inclusionReason: string): string {
+  // "satisfies:req-003:alternate-document-path" -> "alternate document path"
+  const rule = inclusionReason.split(':').pop() ?? inclusionReason
+  return rule.replace(/-/g, ' ')
+}
+
 export function LowerRegion(p: Props) {
   const { snap } = p
   const phase = snap.act2?.phase
+  const sub = snap.submission
 
-  // --- Act II states take precedence once a payer decision exists ---------
+  // --- Act II first: it is the outermost axis. ---
   if (phase === 'AUTHORIZATION_ALIGNED') return <Aligned {...p} />
-  if (phase === 'REMEDIATION_SUBMITTED') return <RemediationPending />
+  if (phase === 'REMEDIATION_SUBMITTING' || phase === 'REMEDIATION_SUBMITTED') {
+    return <RemediationPending />
+  }
   if (phase === 'REMEDIATION_APPROVED') return <RemediationApproved {...p} />
   if (phase === 'REMEDIATION_PREPARED') return <RemediationReview {...p} />
   if (phase === 'PAYER_APPROVED_COVERAGE_GAP') return <CoverageGap {...p} />
 
-  // --- Act I --------------------------------------------------------------
-  if (snap.submission) return <SubmittedPending {...p} />
+  // --- then submission ---
+  if (sub && sub.state !== 'FAILED') {
+    if (sub.state === 'COMPLETE') return <PayerDecision {...p} />
+    if (sub.state === 'UNKNOWN_SUBMISSION_OUTCOME') return <UnknownOutcome {...p} />
+    return <SubmittedPending {...p} />
+  }
+  if (sub?.state === 'FAILED') return <SubmissionFailed {...p} />
+
+  // --- then Act I state ---
   if (snap.state === 'APPROVED') return <ApprovedForSubmission {...p} />
   if (snap.state === 'PREPARED_AWAITING_APPROVAL') return <DisclosureReview {...p} />
-  if (snap.state === 'PACKET_COMPLETE') return <ReadyToPrepare />
-  return <Incomplete snap={snap} />
+  return <PreSubmission {...p} />
 }
 
-function Panel({ title, children, attention }: {
-  title: string; children: React.ReactNode; attention?: boolean
-}) {
-  return (
-    <section className={`panel region${attention ? ' attention' : ''}`} aria-label={title}>
-      <div className="panel-head"><h2>{title}</h2></div>
-      <div className="panel-body">{children}</div>
-    </section>
-  )
-}
+/* ---------- Act I ---------- */
 
-function Incomplete({ snap }: { snap: Snapshot }) {
+function PreSubmission({ snap }: Props) {
   const { satisfied, required } = snap.completeness
-  const started = snap.requirements.length > 0
+  const discovered = snap.requirements.length > 0
+  const ready = snap.state === 'PACKET_COMPLETE'
+  const missing = required - satisfied
+
+  const msg = !discovered
+    ? 'Discover the payer requirements to begin.'
+    : ready
+      ? 'All requirements are satisfied. The assistant can now prepare the submission for your review.'
+      : satisfied === 0
+        ? `${required} of ${required} requirements still need evidence.`
+        : missing === 1
+          ? `1 of ${required} requirements still needs evidence.`
+          : `${missing} of ${required} requirements still need evidence.`
+
   return (
-    <Panel title="Submission">
-      <div className="blocked">
-        <span className="status-chip chip-open">BLOCKED</span>
-        <span data-testid="lower-state">
-          {started
-            ? `${required - satisfied} of ${required} requirements still need evidence. ` +
-              'Submission cannot be prepared until every requirement is satisfied.'
-            : 'Payer requirements have not been discovered yet.'}
+    <div className="lower">
+      <div className="lower-strip">
+        <span className="label" style={{ margin: 0 }}>Submission</span>
+        <span className="divider" style={{ width: 1, height: 20, background: 'var(--hairline)' }} />
+        <span className={`lower-msg${ready ? ' ready' : ''}`} data-testid="lower-state">
+          {msg}
         </span>
+        {/* An affordance, not a button: preparing is the assistant's action. */}
+        {ready && (
+          <span className="badge-ready" style={{ marginLeft: 'auto' }}>
+            Assistant action ready · Prepare submission
+          </span>
+        )}
       </div>
-    </Panel>
+    </div>
   )
 }
 
-function ReadyToPrepare() {
-  return (
-    <Panel title="Submission">
-      <div className="blocked">
-        <span className="status-chip chip-met">READY</span>
-        <span data-testid="lower-state">
-          All requirements are satisfied. The assistant can now prepare the submission
-          for your review.
-        </span>
-      </div>
-    </Panel>
-  )
-}
-
-/** The proposed disclosure — exactly what would be sent, before it is sent. */
 function DisclosureReview({ snap, disclosure, busy, onApproveSubmission }: Props) {
-  return (
-    <Panel title="Proposed disclosure" attention>
-      <p style={{ margin: '0 0 8px', color: 'var(--ink-2)', fontSize: 13 }}>
-        The exact information that would be disclosed to <strong>{snap.payer}</strong>{' '}
-        <span className="sim-banner">SIMULATED PAYER</span> for prior-authorization review.
-      </p>
+  const items = disclosure?.items ?? []
+  const labelFor = (requirementId: string) =>
+    snap.requirements.find((r) => r.id === requirementId)?.label ?? requirementId
 
-      {disclosure && (
-        <div data-testid="disclosure-items">
-          {disclosure.items.map((it) => (
-            <div className="disclosure-item" key={it.requirementId}>
-              <span className="rt">{it.resourceType}</span>
-              <span>
-                {it.requirementId}
-                <span style={{ color: 'var(--ink-3)' }}> · version {it.sourceVersionId}</span>
+  return (
+    <div className="lower">
+      <div className="lower-inner">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 13 }}>
+          <span className="lower-title" data-testid="lower-state">Proposed disclosure</span>
+          <span className="lower-sub">
+            review before approving · the assistant cannot submit
+          </span>
+        </div>
+
+        <div className="review-cols">
+          <div className="review-left">
+            <div className="meta-label">
+              {items.length} evidence item{items.length === 1 ? '' : 's'} · why each is included
+            </div>
+            <div className="disclosure-grid" data-testid="disclosure-items">
+              {items.map((i) => (
+                <div className="disclosure-item" key={i.requirementId}>
+                  <span className="marker" aria-hidden="true" />
+                  <div>
+                    <span className="name">{labelFor(i.requirementId)}</span>
+                    <span className="reason"> — {i.resourceType} · {reasonOf(i.inclusionReason)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="review-rule" />
+
+          <div className="review-right">
+            <div className="meta-row">
+              <div>
+                <div className="meta-label">Destination</div>
+                <div className="meta-value">{disclosure?.destination ?? snap.payer}</div>
+              </div>
+              <div>
+                <div className="meta-label">Purpose</div>
+                <div className="meta-value">Prior authorization</div>
+              </div>
+            </div>
+
+            {disclosure?.exclusionPolicy && (
+              <div className="policy-line">
+                <span className="k">Excluded · </span>
+                {disclosure.exclusionPolicy.excludes.join(', ').replace(/-/g, ' ')}.
+              </div>
+            )}
+
+            {snap.packetHash && (
+              <div className="policy-line" title={snap.packetHash}>
+                <span className="k">Packet · </span>
+                {snap.packetHash.slice(0, 18)}…
+              </div>
+            )}
+
+            <div className="approve-row">
+              <button
+                className="approve"
+                data-testid="approve-submission"
+                onClick={onApproveSubmission}
+                disabled={busy}
+              >
+                Approve submission
+              </button>
+              <span className="approve-note">
+                Approving does not transmit — it authorizes the assistant to submit this exact
+                prepared version.
               </span>
             </div>
-          ))}
-        </div>
-      )}
-
-      <div className="callout">
-        <div className="label">Excluded from this disclosure</div>
-        <div style={{ fontSize: 12.5 }}>
-          {(disclosure?.exclusionPolicy.excludes ?? []).join(' · ').replace(/-/g, ' ')}
+          </div>
         </div>
       </div>
-
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-3)',
-                    marginBottom: 10 }}>
-        packet {snap.packetHash?.slice(0, 30)}…
-      </div>
-
-      <div>
-        <button
-          className="approve"
-          onClick={onApproveSubmission}
-          disabled={busy}
-          data-testid="approve-submission"
-        >
-          Approve submission
-        </button>
-        <p className="approve-note">
-          Approving does not transmit — it authorizes the assistant to submit this exact
-          request.
-        </p>
-      </div>
-    </Panel>
+    </div>
   )
 }
 
 function ApprovedForSubmission({ snap }: Props) {
+  const a = snap.approval
   return (
-    <Panel title="Approved for submission" attention>
-      <div className="blocked">
-        <span className="status-chip chip-met">APPROVED</span>
-        <span data-testid="lower-state">
-          Approved by {snap.approval?.approvedBy} ({snap.approval?.role}). The assistant
-          now has the capability to submit this exact request.
-        </span>
+    <div className="lower">
+      <div className="lower-strip" style={{ animation: 'softIn .45s both' }}>
+        <span className="tick-lg" aria-hidden="true">✓</span>
+        <div>
+          <div className="headline" data-testid="lower-state">Approved for submission</div>
+          <div className="subline">
+            Authorized by {a?.approvedBy ?? '—'}
+            {a?.role ? ` (${a.role})` : ''}
+            {a?.packetHash ? ` · bound to packet ${a.packetHash.slice(7, 15)}` : ''}
+          </div>
+        </div>
+        <span className="trailing">The assistant can now submit.</span>
       </div>
-    </Panel>
+    </div>
   )
 }
 
 function SubmittedPending({ snap }: Props) {
-  const denied = snap.submission?.payerStatus === 'denied'
   return (
-    <Panel title="Submission">
-      <div className="blocked">
-        <span className={`status-chip ${denied ? 'chip-alert' : 'chip-open'}`}>
-          {denied ? 'DENIED' : 'PENDING'}
-        </span>
-        <span data-testid="lower-state">
-          {denied
-            ? 'The simulated payer denied this prior authorization.'
-            : 'Submitted to the simulated payer. Awaiting response.'}
-        </span>
+    <div className="lower">
+      <div className="lower-inner">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span className="pending-dot" aria-hidden="true" />
+          <div>
+            <div className="headline" data-testid="lower-state">
+              Submitted to simulated payer · pending
+            </div>
+            <div className="subline">
+              Monitoring {snap.payer} for a response · claim {snap.submission?.claimIdentifier} ·{' '}
+              {snap.submission?.attempts} transmission
+              {snap.submission?.attempts === 1 ? '' : 's'}
+            </div>
+          </div>
+        </div>
+        <div className="sweep" aria-hidden="true"><span /></div>
       </div>
-      <dl className="kv" style={{ marginTop: 12 }}>
-        <dt>Claim identifier</dt>
-        <dd style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>
-          {snap.submission?.claimIdentifier}
-        </dd>
-        <dt>Transmissions</dt>
-        <dd>{snap.submission?.attempts}</dd>
-      </dl>
-    </Panel>
+    </div>
   )
 }
 
-// --- Act II ----------------------------------------------------------------
-
-/** Approved, but the authorization does not reach the scheduled date. */
-function CoverageGap({ snap, fmtDate }: Props) {
-  const a = snap.act2.alignment
+/**
+ * Payer answered but no coverage gap was found -- the ordinary terminal Act I
+ * outcome. Kept distinct from the gap screen so an approval that genuinely
+ * covers the date is not dressed up as a problem.
+ */
+function PayerDecision({ snap }: Props) {
+  const approved = snap.submission?.payerStatus === 'approved'
   return (
-    <Panel title="Simulated payer response" attention>
-      <div style={{ marginBottom: 12 }}>
-        <span className="sim-banner">SIMULATED PAYER</span>
-        <div className="value lg" style={{ marginTop: 6 }} data-testid="payer-decision">
-          Approved
+    <div className="lower">
+      <div className="lower-inner">
+        <div className="payer-eyebrow">Simulated payer response</div>
+        <div className="gap-row">
+          <div className="gap-cell">
+            <span className={approved ? 'tick-md' : 'warn-md'} aria-hidden="true">
+              {approved ? '✓' : '!'}
+            </span>
+            <div>
+              <div className="gap-label">Payer decision</div>
+              <div className="gap-value" data-testid="payer-decision">
+                {approved ? 'Approved' : 'Denied'}
+              </div>
+            </div>
+          </div>
+          <div className="gap-right">
+            <div className="gap-dates">
+              Reference <strong>{snap.submission?.payerReference ?? '—'}</strong>
+            </div>
+            <div className="gap-explain">
+              Decision recorded by a simulated payer. No real payer was contacted.
+            </div>
+          </div>
         </div>
       </div>
-
-      <div className="callout">
-        <div className="label">Coverage of scheduled service</div>
-        <div className="value" data-testid="coverage-state">Does not cover scheduled date</div>
-        <dl className="kv" style={{ marginTop: 9 }}>
-          <dt>Authorization valid through</dt>
-          <dd>{fmtDate(a?.validThrough)}</dd>
-          <dt>MRI scheduled</dt>
-          <dd>{fmtDate(a?.scheduledServiceDate)}</dd>
-        </dl>
-      </div>
-
-      <p style={{ margin: 0, color: 'var(--ink-2)' }}>
-        The payer approved, but the ordered care remains administratively blocked.
-      </p>
-    </Panel>
+    </div>
   )
 }
 
-/** The exact remediation, shown before a human authorizes it. */
+function SubmissionFailed({ snap }: Props) {
+  return (
+    <div className="lower">
+      <div className="lower-inner">
+        <div className="refusal-row">
+          <span className="warn-md" aria-hidden="true">!</span>
+          <div style={{ flex: 1 }}>
+            <div className="headline" data-testid="lower-state">
+              Payer refused the submission before recording it
+            </div>
+            <div className="subline">
+              Nothing was recorded by {snap.payer}. Evidence editing has re-opened.
+            </div>
+          </div>
+          <span className="refusal-chip">Not accepted</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Ambiguous transport. Never auto-retried -- it needs explicit reconciliation. */
+function UnknownOutcome({ snap }: Props) {
+  return (
+    <div className="lower">
+      <div className="lower-inner">
+        <div className="refusal-row">
+          <span className="warn-md" aria-hidden="true">!</span>
+          <div style={{ flex: 1 }}>
+            <div className="headline" data-testid="lower-state">
+              Submission outcome unknown — reconciliation required
+            </div>
+            <div className="subline">
+              {snap.payer} may or may not hold this request. It will not be resubmitted
+              automatically.
+            </div>
+          </div>
+          <span className="refusal-chip">Needs reconciliation</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Act II ---------- */
+
+function CoverageGap({ snap, fmtDate }: Props) {
+  const align = snap.act2?.alignment
+  const canResolve = snap.availableTools.includes('resolve_authorization_window')
+
+  return (
+    <div className="lower">
+      <div className="lower-inner">
+        <div className="payer-eyebrow">Simulated payer response</div>
+
+        <div className="gap-row">
+          <div className="gap-cell">
+            <span className="tick-md" aria-hidden="true">✓</span>
+            <div>
+              <div className="gap-label">Payer decision</div>
+              <div className="gap-value" data-testid="payer-decision">Approved</div>
+            </div>
+          </div>
+
+          <div className="gap-rule" />
+
+          <div className="gap-cell">
+            <span className="warn-md" aria-hidden="true">!</span>
+            <div>
+              <div className="gap-label">Coverage of scheduled service</div>
+              <div className="gap-value warn" data-testid="coverage-state">
+                Does not cover scheduled date
+              </div>
+            </div>
+          </div>
+
+          <div className="gap-right">
+            <div className="gap-dates">
+              Authorization valid through <strong>{fmtDate(align?.validThrough)}</strong> · MRI
+              scheduled <strong className="warn">{fmtDate(align?.scheduledServiceDate)}</strong>
+            </div>
+            <div className="gap-explain">
+              The payer approved, but the ordered care remains administratively blocked.
+            </div>
+          </div>
+        </div>
+
+        {/* The capability appeared because of the payer's own response -- not
+            because the browser did anything. */}
+        {canResolve && (
+          <div className="gap-action">
+            <span className="badge-ready">
+              Assistant action ready · Resolve authorization window
+            </span>
+            <span className="gap-action-note">
+              WellAuth evaluated the payer result against the scheduled service and exposed a new
+              bounded action.
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function RemediationReview({ snap, busy, fmtDate, onApproveRemediation }: Props) {
   const r = snap.remediation
   return (
-    <Panel title="Proposed remediation — authorization window" attention>
-      <dl className="kv">
-        <dt>Current authorization</dt>
-        <dd data-testid="rem-current">Valid through {fmtDate(r?.currentValidThrough)}</dd>
-        <dt>Scheduled MRI</dt>
-        <dd>{fmtDate(r?.scheduledServiceDate)}</dd>
-        <dt>Requested change</dt>
-        <dd data-testid="rem-requested">
-          Extend validity through {fmtDate(r?.requestedValidThrough)}
-        </dd>
-        <dt>Reason</dt>
-        <dd>{r?.reasonDisplay}</dd>
-      </dl>
+    <div className="lower">
+      <div className="lower-inner">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 13 }}>
+          <span className="lower-title" data-testid="lower-state">
+            Proposed remediation — authorization window
+          </span>
+          <span className="lower-sub">review before approving · the assistant cannot submit</span>
+        </div>
 
-      <div className="callout">
-        <div className="label">Unchanged</div>
-        <div style={{ fontSize: 13 }}>
-          Ordered service, clinical evidence, and medical intent.
+        <div className="review-cols">
+          <div className="rem-grid">
+            <div>
+              <div className="meta-label">Current authorization</div>
+              <div className="rem-value" data-testid="rem-current">
+                Valid through {fmtDate(r?.currentValidThrough)}
+              </div>
+            </div>
+            <div>
+              <div className="meta-label">Scheduled MRI</div>
+              <div className="rem-value warn">{fmtDate(r?.scheduledServiceDate)}</div>
+            </div>
+            <div>
+              <div className="meta-label">Requested change</div>
+              <div className="rem-value request" data-testid="rem-requested">
+                Extend validity through {fmtDate(r?.requestedValidThrough)}
+              </div>
+            </div>
+            <div>
+              <div className="meta-label">Reason</div>
+              <div className="rem-reason">{r?.reasonDisplay}</div>
+            </div>
+          </div>
+
+          <div className="review-rule" />
+
+          <div className="review-right">
+            {/* Rendered literally from the three explicit false flags, not
+                paraphrased -- this is the honest answer to "what am I
+                authorizing?". */}
+            <div className="policy-line">
+              <span className="k">Unchanged · </span>
+              ordered service, clinical evidence, and medical intent. Administrative correction
+              only — no clinical reconsideration.
+            </div>
+
+            {r?.hash && (
+              <div className="policy-line" title={r.hash}>
+                <span className="k">Request · </span>
+                {r.hash.slice(0, 18)}…
+              </div>
+            )}
+
+            <div className="approve-row">
+              <button
+                className="approve"
+                data-testid="approve-remediation"
+                onClick={onApproveRemediation}
+                disabled={busy}
+              >
+                Approve extension request
+              </button>
+              <span className="approve-note">
+                Approving does not transmit — it authorizes the assistant to submit this exact
+                request.
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div>
-        <button
-          className="approve"
-          onClick={onApproveRemediation}
-          disabled={busy}
-          data-testid="approve-remediation"
-        >
-          Approve extension request
-        </button>
-        <p className="approve-note">
-          Approving does not transmit — it authorizes the assistant to submit this exact
-          request.
-        </p>
-      </div>
-    </Panel>
+    </div>
   )
 }
 
 function RemediationApproved({ snap }: Props) {
+  const a = snap.remediation?.approval
   return (
-    <Panel title="Extension approved for submission" attention>
-      <div className="blocked">
-        <span className="status-chip chip-met">APPROVED</span>
-        <span data-testid="lower-state">
-          Approved by {snap.remediation?.approval?.approvedBy}. The assistant now has the
-          capability to submit this exact extension request.
-        </span>
+    <div className="lower">
+      <div className="lower-strip" style={{ animation: 'softIn .45s both' }}>
+        <span className="tick-lg" aria-hidden="true">✓</span>
+        <div>
+          <div className="headline" data-testid="lower-state">Extension approved for submission</div>
+          <div className="subline">
+            Authorized by {a?.approvedBy ?? '—'}
+            {a?.role ? ` (${a.role})` : ''}
+            {snap.remediation?.hash ? ` · bound to request ${snap.remediation.hash.slice(7, 15)}` : ''}
+          </div>
+        </div>
+        <span className="trailing">The assistant can now submit the extension.</span>
       </div>
-    </Panel>
+    </div>
   )
 }
 
 function RemediationPending() {
   return (
-    <Panel title="Extension submitted">
-      <div className="blocked">
-        <span className="status-chip chip-open">PENDING</span>
-        <span data-testid="lower-state">
-          Remediation submitted to simulated payer · pending
-        </span>
+    <div className="lower">
+      <div className="lower-inner">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span className="pending-dot" aria-hidden="true" />
+          <div>
+            <div className="headline" data-testid="lower-state">
+              Remediation submitted to simulated payer · pending
+            </div>
+            <div className="subline">Monitoring for an updated authorization…</div>
+          </div>
+        </div>
+        <div className="sweep" aria-hidden="true"><span /></div>
       </div>
-    </Panel>
+    </div>
   )
 }
 
-/** Terminal administrative state. */
 function Aligned({ snap, fmtDate }: Props) {
   const r = snap.remediation
   return (
-    <Panel title="Simulated payer · authorization updated" attention>
-      <span className="sim-banner">SIMULATED PAYER · AUTHORIZATION UPDATED</span>
+    <div className="lower">
+      <div className="lower-inner">
+        <div className="payer-eyebrow aligned">Simulated payer · authorization updated</div>
+        <div className="gap-row">
+          <div className="gap-cell">
+            <span className="tick-md" aria-hidden="true">✓</span>
+            <div>
+              <div className="gap-label">Scheduled MRI</div>
+              <div className="gap-value met" data-testid="final-coverage">
+                Covered by authorization
+              </div>
+            </div>
+          </div>
 
-      <dl className="kv" style={{ marginTop: 12 }}>
-        <dt>Scheduled MRI</dt>
-        <dd className="value" data-testid="final-coverage">Covered by authorization</dd>
-        <dt>Administrative readiness</dt>
-        <dd className="value" data-testid="final-readiness">Ready</dd>
-        <dt>Reference</dt>
-        <dd style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>
-          #{r?.payerAuthorizationReference} · EXT
-        </dd>
-        <dt>Validity</dt>
-        <dd>
-          Valid through {fmtDate(r?.currentValidThrough)} · covers{' '}
-          {fmtDate(r?.scheduledServiceDate)} MRI
-        </dd>
-      </dl>
+          <div className="gap-rule" />
 
-      <p className="notice">
-        Administrative alignment only — not a clinical determination.
-      </p>
-    </Panel>
+          <div>
+            <div className="gap-label">Administrative readiness</div>
+            <div className="gap-value" data-testid="final-readiness">Ready</div>
+          </div>
+
+          <div className="gap-right">
+            <div className="final-ref">
+              #{r?.payerAuthorizationReference ?? '—'} · EXT
+            </div>
+            {/* Validity comes from remediation.currentValidThrough. The
+                authorization-status route still reports the ORIGINAL receipt
+                window, so reading it here would show a stale date (Gap C-4). */}
+            <div className="final-validity">
+              Valid through {fmtDate(r?.currentValidThrough)} · covers{' '}
+              {fmtDate(r?.scheduledServiceDate)} MRI
+            </div>
+            <div className="final-note">
+              Administrative alignment only — not a clinical determination.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

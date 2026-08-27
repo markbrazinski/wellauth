@@ -111,6 +111,16 @@ async function snapshot(workflowId) {
   } catch {
     order = null
   }
+  // C-1: bounded patient identity for the context band. Non-fatal for the same
+  // reason as the order read -- a FHIR blip must degrade one band cell, not
+  // take down the page. A null patient renders as unavailable, never as a
+  // fabricated name.
+  let patient = null
+  try {
+    patient = await service.getPatient(workflowId)
+  } catch {
+    patient = null
+  }
   const scheduled = order?.scheduled ?? null
   const scheduledServiceDate = scheduled ? String(scheduled).slice(0, 10) : null
 
@@ -123,6 +133,7 @@ async function snapshot(workflowId) {
   return {
     ...wf,
     order,
+    patient,
     scheduledServiceDate,
     scheduledServiceDisplay: fixture.SCHEDULED_SERVICE_DISPLAY,
     // Only surfaced once the workflow has ACTUALLY resolved them. Returning

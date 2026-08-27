@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:oklch(0.955 0.004 260);color:oklch(0.24 0.02 250);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-wrap:pretty}
+  a{color:oklch(0.5 0.1 245);text-decoration:none}
+  a:hover{color:oklch(0.42 0.1 245)}
+</style>
+</helmet>
+<div style="max-width:1240px;margin:0 auto;padding:0 40px 110px">
+
+  <header style="padding:64px 0 34px;border-bottom:1px solid oklch(0.9 0.005 260)">
+    <div style="font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.15em;text-transform:uppercase;color:oklch(0.5 0.1 245);margin-bottom:20px">Design validation · against INTEGRATION-CONTRACT.md</div>
+    <h1 style="font:600 40px/1.08 'IBM Plex Sans',sans-serif;letter-spacing:-.02em;margin:0 0 18px;max-width:24ch">Can the approved WellAuth design be built truthfully against the real backend?</h1>
+    <p style="font:400 16px/1.6 'IBM Plex Sans',sans-serif;color:oklch(0.46 0.02 250);max-width:80ch;margin:0">Every canonical beat walked against the deployed provider contract. The design was not reopened — only the changes required for a truthful implementation were made. Companion to the live workspace in <a href="#">WellAuth Workspace.dc.html</a>.</p>
+  </header>
+
+  <!-- 1 VERDICT -->
+  <section style="padding:40px 0 0">
+    <div style="background:oklch(0.24 0.02 250);border-radius:10px;padding:28px 32px;display:flex;align-items:center;gap:26px;flex-wrap:wrap">
+      <div>
+        <div style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:oklch(0.72 0.05 245);margin-bottom:9px">1 · Verdict</div>
+        <div style="font:600 26px/1.05 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;color:#fff">READY FOR IMPLEMENTATION</div>
+        <div style="font:500 11px/1.3 'IBM Plex Mono',monospace;color:oklch(0.78 0.04 245);margin-top:8px">conditional on two backend projections (C-1, C-2)</div>
+      </div>
+      <div style="flex:1;min-width:340px;font:400 13px/1.65 'IBM Plex Sans',sans-serif;color:oklch(0.86 0.02 245)">The full demo spine is supported by real state. No beat is unsupported. The design keys the lower region off <strong style="color:#fff">act2.phase → submission → state</strong> as the contract requires, never shows a disabled capability, and both approvals bind an exact hash without transmitting. Two data points the approved design depends on (patient identity, evidence title/date) are not on the snapshot yet and must be projected before the provenance and context-band treatments are truthful. Everything else is presentation-derivable from data that already exists.</div>
+    </div>
+  </section>
+
+  <!-- 2 BEAT TABLE -->
+  <section style="padding:52px 0 0">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px"><span style="font:600 14px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245)">2</span><h2 style="font:600 26px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;margin:0">Beat-by-beat validation</h2></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 20px">
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace;color:oklch(0.4 0.1 155)">✅ supported as designed</span>
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.11 250)">🟡 design adjustment</span>
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.12 40)">🔴 backend projection</span>
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.13 25)">❌ unsupported</span>
+    </div>
+    <div style="border:1px solid oklch(0.9 0.006 260);border-radius:10px;overflow:hidden;background:#fff">
+      <div style="display:grid;grid-template-columns:52px 1.5fr 1.6fr 1.7fr;background:oklch(0.965 0.004 260);border-bottom:1px solid oklch(0.9 0.006 260)">
+        <div style="padding:11px 14px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.5 0.02 250)">Beat</div>
+        <div style="padding:11px 14px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.5 0.02 250)">Existing design</div>
+        <div style="padding:11px 14px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.5 0.02 250)">Contract support</div>
+        <div style="padding:11px 14px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.5 0.02 250)">Required change</div>
+      </div>
+      <sc-for list="{{ beats }}" as="b" hint-placeholder-count="14">
+        <div style="display:grid;grid-template-columns:52px 1.5fr 1.6fr 1.7fr;border-bottom:1px solid oklch(0.945 0.004 260)">
+          <div style="padding:12px 14px;font:600 12px/1.3 'IBM Plex Mono',monospace;color:oklch(0.45 0.02 250)">{{ b.n }}</div>
+          <div style="padding:12px 14px;font:500 11.5px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">{{ b.design }}</div>
+          <div style="padding:12px 14px;font:400 11.5px/1.45 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.02 250)"><span style="font-weight:600;color:{{ b.color }}">{{ b.mark }}</span> {{ b.support }}</div>
+          <div style="padding:12px 14px;font:400 11.5px/1.45 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.02 250)">{{ b.change }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- 3 PROJECTIONS -->
+  <section style="padding:52px 0 0">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px"><span style="font:600 14px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245)">3</span><h2 style="font:600 26px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;margin:0">Backend projections required</h2></div>
+    <p style="font:400 15px/1.6 'IBM Plex Sans',sans-serif;color:oklch(0.46 0.02 250);max-width:82ch;margin:0 0 22px">Minimal list engineering must add. Each truth already exists in FHIR or Firestore; none is new product behavior. Ordered by whether the approved design can ship without it.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{ projections }}" as="p" hint-placeholder-count="5">
+        <div style="border:1px solid {{ p.border }};border-left:4px solid {{ p.accent }};border-radius:8px;background:#fff;padding:18px 20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <span style="font:600 11px/1 'IBM Plex Mono',monospace;color:{{ p.accent }}">{{ p.id }}</span>
+            <span style="font:600 14px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.26 0.02 250)">{{ p.title }}</span>
+            <span style="margin-left:auto;font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:5px;background:{{ p.tagBg }};color:{{ p.accent }}">{{ p.tag }}</span>
+          </div>
+          <div style="font:400 12.5px/1.55 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.02 250)">{{ p.body }}</div>
+          <div style="font:500 11px/1.5 'IBM Plex Mono',monospace;color:oklch(0.48 0.02 250);margin-top:8px">Source that exists · {{ p.source }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- 4 DESIGN CORRECTIONS -->
+  <section style="padding:52px 0 0">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px"><span style="font:600 14px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245)">4</span><h2 style="font:600 26px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;margin:0">Design corrections applied</h2></div>
+    <p style="font:400 15px/1.6 'IBM Plex Sans',sans-serif;color:oklch(0.46 0.02 250);max-width:82ch;margin:0 0 22px">Made directly to <a href="#">WellAuth Workspace.dc.html</a>. Only truthfulness fixes — no visual redesign. (The prior pass already removed the phantom "Submit · blocked" chip and moved demo controls outside the frame.)</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <sc-for list="{{ corrections }}" as="c" hint-placeholder-count="6">
+        <div style="border:1px solid oklch(0.9 0.006 260);border-radius:8px;background:#fff;padding:16px 18px">
+          <div style="font:600 13px/1.25 'IBM Plex Sans',sans-serif;color:oklch(0.28 0.02 250);margin-bottom:6px">{{ c.title }}</div>
+          <div style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:oklch(0.44 0.02 250)">{{ c.body }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- 5 STATE INVENTORY -->
+  <section style="padding:52px 0 0">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px"><span style="font:600 14px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245)">5</span><h2 style="font:600 26px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;margin:0">Final state inventory</h2></div>
+    <p style="font:400 15px/1.6 'IBM Plex Sans',sans-serif;color:oklch(0.46 0.02 250);max-width:82ch;margin:0 0 22px">One screen, one state machine. These are render variants of the same four regions — not separate layouts. Each is keyed by the snapshot fields shown.</p>
+    <div style="border:1px solid oklch(0.9 0.006 260);border-radius:10px;overflow:hidden;background:#fff">
+      <div style="display:grid;grid-template-columns:34px 1.4fr 1.5fr 1.5fr;background:oklch(0.965 0.004 260);border-bottom:1px solid oklch(0.9 0.006 260)">
+        <div style="padding:10px 12px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.5 0.02 250)">#</div>
+        <div style="padding:10px 12px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.5 0.02 250)">State</div>
+        <div style="padding:10px 12px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.5 0.02 250)">Snapshot key</div>
+        <div style="padding:10px 12px;font:600 9px/1.2 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.5 0.02 250)">Lower region</div>
+      </div>
+      <sc-for list="{{ inventory }}" as="s" hint-placeholder-count="14">
+        <div style="display:grid;grid-template-columns:34px 1.4fr 1.5fr 1.5fr;border-bottom:1px solid oklch(0.945 0.004 260)">
+          <div style="padding:10px 12px;font:600 11px/1.3 'IBM Plex Mono',monospace;color:{{ s.actColor }}">{{ s.n }}</div>
+          <div style="padding:10px 12px;font:500 12px/1.35 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">{{ s.name }}</div>
+          <div style="padding:10px 12px;font:400 10.5px/1.4 'IBM Plex Mono',monospace;color:oklch(0.48 0.02 250)">{{ s.key }}</div>
+          <div style="padding:10px 12px;font:400 11.5px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.44 0.02 250)">{{ s.region }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- 6 HANDOFF -->
+  <section style="padding:52px 0 0">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:8px"><span style="font:600 14px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245)">6</span><h2 style="font:600 26px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;margin:0">Claude Code commission</h2></div>
+    <p style="font:400 15px/1.6 'IBM Plex Sans',sans-serif;color:oklch(0.46 0.02 250);max-width:82ch;margin:0 0 20px">Concise contract for implementation. Copy this into the build task.</p>
+    <div style="background:oklch(0.22 0.02 255);border-radius:10px;padding:26px 30px;color:oklch(0.9 0.015 250);font:400 13px/1.7 'IBM Plex Sans',sans-serif">
+      <div style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:oklch(0.72 0.05 245);margin-bottom:16px">Commission · WellAuth final UI</div>
+      <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:11px">
+        <sc-for list="{{ commission }}" as="c" hint-placeholder-count="10">
+          <li style="padding-left:4px"><strong style="color:#fff">{{ c.h }}</strong> {{ c.b }}</li>
+        </sc-for>
+      </ol>
+    </div>
+  </section>
+
+  <footer style="margin-top:70px;padding-top:26px;border-top:1px solid oklch(0.9 0.005 260);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <span style="font:400 12px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 250)">WellAuth · contract validation · pre-implementation gate</span>
+    <span style="font:400 12px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 250)">Verdict: READY (C-1, C-2 required)</span>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const G = "oklch(0.4 0.1 155)", Y = "oklch(0.5 0.11 250)", R = "oklch(0.5 0.12 40)", X = "oklch(0.5 0.13 25)";
+    const mk = { ok: { mark: "✅", color: G }, adj: { mark: "🟡", color: Y }, proj: { mark: "🔴", color: R }, no: { mark: "❌", color: X } };
+
+    const beats = [
+      { n: "1", design: "Context band + empty requirements, status “Prior authorization required”", support: "CONTEXT_READY, requirements:[] deliberately empty, 0/5 not shown", change: "None. Honest empty state already used; no “0 of 5” shown pre-discovery.", ...mk.ok },
+      { n: "2", design: "5 OPEN requirement rows, 0/5, evidence actions appear", support: "REQUIREMENTS_RESOLVED, +find/inspect/attach in availableTools", change: "Dropped remove_evidence from the 0/5 chip set (not yet available).", ...mk.adj },
+      { n: "3", design: "4 MET rows w/ provenance, req-003 OPEN + searching, 4/5", support: "bindings[4] + completeness 4/5; refusal is real (409) here", change: "Provenance title+date depend on C-2 projection.", ...mk.proj },
+      { n: "4", design: "5th located ‘elsewhere’, OPEN→MET, 4/5→5/5, prepare readies", support: "PACKET_COMPLETE; req-003 bindingRule alternate-document-path", change: "None. alternatePath flag is exactly the ‘found elsewhere’ beat.", ...mk.ok },
+      { n: "5", design: "Proposed disclosure: items, reasons, dest, purpose, exclusions", support: "GET /disclosure carries resourceType, id, version, exclusionPolicy, packetHash", change: "Evidence tools stay visible (editing invalidates); ‘reason’ maps to inclusionReason.", ...mk.adj },
+      { n: "6", design: "Approved-for-submission; submit capability appears NEW", support: "APPROVED; +submit_prior_authorization; approval.submitted:false", change: "None. Approval-does-not-transmit already stated.", ...mk.ok },
+      { n: "7", design: "Submitted · pending with progress sweep", support: "submission.state SUBMITTING/SUBMITTED_OR_PENDING; poll 5s", change: "Beat may be brief (synchronous sim). Show claimId + attempts:1.", ...mk.ok },
+      { n: "8", design: "SIMULATED PAYER Approved + ‘does not cover scheduled date’, both dates", support: "act2 PAYER_APPROVED_COVERAGE_GAP, alignment.aligned:false, both dates present", change: "None. Non-terminal framing already correct.", ...mk.ok },
+      { n: "9", design: "‘Resolve authorization window’ unlocks from payer state", support: "+resolve_authorization_window; same snapshot as the gap", change: "None. External-state unlock is the headline proof.", ...mk.ok },
+      { n: "10", design: "Proposed remediation: current/scheduled/requested, reason, unchanged-triple", support: "remediation object incl. clinicalIntent/evidence/orderChanged:false", change: "Render the three false flags literally (do not paraphrase).", ...mk.adj },
+      { n: "11", design: "Extension approved; Submit extension appears NEW", support: "REMEDIATION_APPROVED; +submit_authorization_extension", change: "None. Second approval mirrors Act I grammar; does not transmit.", ...mk.ok },
+      { n: "12", design: "Submit extension → remediation submitted · pending", support: "REMEDIATION_SUBMITTING; attempts:1", change: "None. Don’t assert alignment before payer validity persists.", ...mk.ok },
+      { n: "13", design: "Authorization aligned: MRI covered, Ready, #NS-40192·EXT, valid Oct 3", support: "AUTHORIZATION_ALIGNED; validity from remediation.currentValidThrough", change: "Bind final validity from remediation, NOT authorization-status (C-4).", ...mk.adj },
+      { n: "R", design: "Missing-evidence refusal: 4/5, no prepare/approve/submit", support: "POST /prepare → 409 MISSING_REQUIRED_EVIDENCE (req-003), verified live", change: "Evidence tools stay (may keep searching); no prepare affordance.", ...mk.ok },
+      { n: "—", design: "Activity timeline (assistant / human / payer)", support: "Derived from durable state; only 3 event types carry real timestamps", change: "Stamp only attach + both approvals; others render without a time (C-3).", ...mk.adj },
+    ];
+
+    const projections = [
+      { id: "C-1", title: "Patient identity on the snapshot", tag: "Required", body: "The context band shows a synthetic patient; the snapshot has none — only patientContextRef inside the disclosure. Add a bounded patient:{display, syntheticLabel} projection read from the FHIR Patient resource. Without it the band either fabricates a name (as the smoke UI does) or drops identity — both bad.", source: "FHIR Patient/wellauth-patient-001", accent: R, border: "oklch(0.86 0.06 40)", tagBg: "oklch(0.97 0.04 40)" },
+      { id: "C-2", title: "Evidence title + clinical date on bindings", tag: "Required", body: "The locked provenance line is ‘↳ title · date · source · attached by assistant’. bindings[] carry only resourceType, sourceVersionId, boundAt. Persist title + effectiveDate onto the binding at attach time (or add to the snapshot’s binding projection). Values already exist on the evidence-discovery route.", source: "GET /requirements/{id}/evidence → candidates[].title, effectiveDate", accent: R, border: "oklch(0.86 0.06 40)", tagBg: "oklch(0.97 0.04 40)" },
+      { id: "C-3", title: "Per-event Activity timestamps", tag: "Recommended", body: "Design corrected to stamp only the durable events (attachments, both approvals) and leave others unstamped, ordered by sequence — so it ships without this. If a fully-stamped timeline is wanted, expose the existing Firestore transition ledger (workflowRef/transitions) read-only.", source: "Firestore workflowRef/transitions (appendTransition)", accent: Y, border: "oklch(0.87 0.05 250)", tagBg: "oklch(0.97 0.03 250)" },
+      { id: "C-4", title: "Post-extension validity", tag: "Data-source note", body: "No projection needed. The aligned screen must read validity from remediation.currentValidThrough (Oct 3); authorization-status.authorizationPeriod still reports the original Sep 12 receipt. Bind the final ‘valid through’ from remediation only.", source: "remediation.currentValidThrough", accent: Y, border: "oklch(0.87 0.05 250)", tagBg: "oklch(0.97 0.03 250)" },
+      { id: "C-5", title: "Act II HTTP status codes", tag: "No visual impact", body: "Act II refusals return HTTP 400 carrying a correct bounded code where Act I returns 409. The UI keys off the code string, never the HTTP status, so no design change — noted so implementation follows suit.", source: "provider/index.js HTTP_STATUS (code is authoritative)", accent: "oklch(0.5 0.02 250)", border: "oklch(0.9 0.006 260)", tagBg: "oklch(0.96 0.004 260)" },
+    ];
+
+    const corrections = [
+      { title: "Capability labels aligned to §3.2", body: "Chip text now matches the contract: Review order context, Discover payer requirements, Find supporting evidence, Attach existing evidence, Remove attached evidence, Submit to payer, Check authorization status, etc." },
+      { title: "remove_evidence hidden at 0/5", body: "It is genuinely unavailable until 1–4/5, so it no longer appears in the just-discovered state — the UI never shows an unavailable action." },
+      { title: "Evidence tools kept visible at PREPARED", body: "availableTools still lists the 5 evidence tools at PREPARED_AWAITING_APPROVAL; they now render (de-emphasized) with a note that editing invalidates the packet. Only submission is absent." },
+      { title: "Read-only tools shown post-submission", body: "Submitted / Act II monitoring states now surface Review order context + Check authorization status rather than a single ‘Monitor status’, mirroring availableTools." },
+      { title: "Activity timestamps de-faked", body: "Only attachments and the two human approvals carry a durable time; discovery, prepare, submit, and payer events render without a fabricated per-event timestamp." },
+      { title: "Unlock cue label", body: "The submit toast reads ‘WebMCP action unlocked · Submit to payer’, matching the capability label; raw tool names remain acceptable only in the transient cue." },
+    ];
+
+    const inv = (n, name, key, region, act) => ({ n, name, key, region, actColor: act === 2 ? "oklch(0.5 0.1 245)" : (act === "R" ? "oklch(0.55 0.13 30)" : "oklch(0.45 0.02 250)") });
+    const inventory = [
+      inv("1", "Authorization required", "state:CONTEXT_READY · req:[]", "Blocked — requirements not discovered", 1),
+      inv("2", "Requirements discovered", "REQUIREMENTS_RESOLVED · 0/5", "Blocked — 5 need evidence", 1),
+      inv("3", "Four of five", "REQUIREMENTS_RESOLVED · 4/5", "Blocked — 1 needs evidence", 1),
+      inv("4", "Five of five", "PACKET_COMPLETE · 5/5", "Ready — prepare available", 1),
+      inv("5", "Prepared, awaiting approval", "PREPARED_AWAITING_APPROVAL · packetHash", "Proposed disclosure + Approve submission", 1),
+      inv("6", "Approved, submit unlocked", "APPROVED · approval set", "Approved-for-submission", 1),
+      inv("7", "Submitted / pending", "submission:SUBMITTING/PENDING", "Submitted · pending (poll)", 1),
+      inv("8", "Payer approved · window mismatch", "act2:PAYER_APPROVED_COVERAGE_GAP", "Payer Approved + does-not-cover", 2),
+      inv("9", "Remediation prepared", "act2:REMEDIATION_PREPARED", "Proposed remediation + Approve extension", 2),
+      inv("10", "Extension approved", "act2:REMEDIATION_APPROVED", "Approved-for-submission (ext)", 2),
+      inv("11", "Extension submitted", "act2:REMEDIATION_SUBMITTING", "Remediation submitted · pending", 2),
+      inv("12", "Authorization aligned", "act2:AUTHORIZATION_ALIGNED", "Updated · MRI covered · Ready", 2),
+      inv("R", "Missing-evidence refusal", "REQUIREMENTS_RESOLVED · 4/5 · 409", "Blocked — required evidence absent", "R"),
+    ];
+
+    const commission = [
+      { h: "Rebuild the approved design.", b: "Implement WellAuth Workspace.dc.html as the production UI — the four fixed regions (context band, requirements/basis, Assistant+Activity, lower transforming region) and the 13-state + refusal machine. Replace all src/*.tsx smoke-test presentation; keep none of its copy, hardcoded titles, or the hardcoded patient name." },
+      { h: "Preserve the plumbing.", b: "Keep src/capabilities.ts (tool registry, snapshot fetch, approval calls) and src/webmcp.ts (AbortSignal registration lifecycle, sync serialization) as-is — verified against native Chrome. Do not re-implement the WebMCP lifecycle." },
+      { h: "One read drives everything.", b: "Render from GET /workflows/wf-wellauth-001/snapshot. No client-held workflow state; a hard reload at any beat must reconstruct the identical page and tool inventory." },
+      { h: "Never compute capabilities.", b: "The Assistant action chips and the WebMCP registration both derive from availableTools verbatim (mapped to §3.2 labels). Absent = not rendered; never a disabled button." },
+      { h: "Lower-region precedence.", b: "Select the lower region by act2.phase → submission → state. state stays APPROVED through all of Act II by design." },
+      { h: "Two human gates only.", b: "Approve submission and Approve extension request are workforce-only (X-WellAuth-User/Role headers), each POSTs acknowledged hash + expected_revision + nonce, and neither transmits. Every mutating call echoes expected_revision." },
+      { h: "Add exactly two backend projections.", b: "C-1 patient:{display, syntheticLabel} from FHIR Patient; C-2 title + effectiveDate onto evidence bindings. Do not add anything else." },
+      { h: "Bind the tricky data points.", b: "Final validity from remediation.currentValidThrough (not authorization-status, C-4). Timeline stamps only attach + approvals (C-3). Key refusals off bounded code, not HTTP status (C-5)." },
+      { h: "Keep it honest.", b: "‘SIMULATED PAYER’ visible wherever a payer decision shows; render the clinicalIntent/evidence/orderChanged:false triple literally; final success is ‘administrative alignment’, never a clinical determination." },
+      { h: "Worklist (D-1).", b: "Keep the ‘Worklist / Authorization’ label as a presentational breadcrumb only — one canonical workflow exists; do not build a list endpoint or a multi-case view. Deep-link straight into the workspace." },
+    ];
+
+    return { beats, projections, corrections, inventory, commission };
+  }
+}
+</script>
+</body>
+</html>

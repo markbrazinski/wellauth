@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:oklch(0.94 0.005 240);color:oklch(0.24 0.02 250);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;text-wrap:pretty}
+  a{color:oklch(0.5 0.1 245);text-decoration:none}
+  a:hover{color:oklch(0.42 0.1 245)}
+  @keyframes rowIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  @keyframes toastIn{0%{opacity:0;transform:translate(-50%,-10px)}10%{opacity:1;transform:translate(-50%,0)}90%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-6px)}}
+  @keyframes softIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  @keyframes pulseDot{0%,100%{opacity:.3}50%{opacity:1}}
+  @keyframes barSlide{0%{left:-38%}100%{left:100%}}
+  @keyframes chipPop{0%{opacity:0;transform:scale(.9)}60%{transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:34px 34px 80px;display:flex;flex-direction:column;align-items:center;gap:20px">
+
+  <!-- ============ PROTOTYPE NAVIGATOR (tooling — not part of the product) ============ -->
+  <div style="width:1520px;max-width:100%;display:flex;align-items:center;gap:14px;padding:9px 12px;background:oklch(0.28 0.015 260);border-radius:7px">
+    <span style="font:700 8.5px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:oklch(0.72 0.05 260);padding:4px 7px;border:1px solid oklch(0.42 0.03 260);border-radius:4px;flex:none">Prototype</span>
+    <div style="display:flex;align-items:center;gap:7px;flex:none">
+      <button onClick="{{ prev }}" style="font:600 14px/1 'IBM Plex Mono',monospace;width:30px;height:30px;border:1px solid oklch(0.42 0.03 260);background:oklch(0.34 0.015 260);border-radius:5px;color:oklch(0.9 0.02 260);cursor:pointer">←</button>
+      <span style="font:600 12px/1 'IBM Plex Mono',monospace;color:#fff;min-width:52px;text-align:center;letter-spacing:.04em">{{ beatNum }} / {{ beatTotal }}</span>
+      <button onClick="{{ next }}" style="font:600 14px/1 'IBM Plex Mono',monospace;width:30px;height:30px;border:1px solid oklch(0.42 0.03 260);background:oklch(0.34 0.015 260);border-radius:5px;color:oklch(0.9 0.02 260);cursor:pointer">→</button>
+    </div>
+    <span style="width:1px;height:20px;background:oklch(0.42 0.03 260);flex:none"></span>
+    <span style="font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:{{ beatActColor }};flex:none">{{ beatAct }}</span>
+    <span style="font:500 12px/1 'IBM Plex Sans',sans-serif;color:oklch(0.88 0.02 260)">{{ beatName }}</span>
+    <span style="margin-left:auto;font:400 10px/1 'IBM Plex Mono',monospace;color:oklch(0.68 0.03 260);letter-spacing:.04em">{{ stateCode }}</span>
+    <span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:oklch(0.6 0.03 260);flex:none">← → keys</span>
+  </div>
+
+  <!-- ============ THE PRODUCT : Authorization workspace ============ -->
+  <div style="position:relative;width:1520px;max-width:100%">
+
+    <sc-if value="{{ toastShown }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;top:64px;left:50%;z-index:40;animation:toastIn 3.2s ease both;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;padding:11px 16px;border-radius:6px;display:flex;align-items:center;gap:9px;background:{{ toastBg }};color:{{ toastColor }};box-shadow:0 8px 24px rgba(20,28,45,.16)">
+        <span style="font-size:12px;opacity:.85">{{ toastGlyph }}</span>{{ toastText }}
+      </div>
+    </sc-if>
+
+    <div style="height:832px;background:oklch(0.985 0.005 240);border:1px solid oklch(0.82 0.014 240);border-radius:8px;overflow:hidden;display:flex;flex-direction:column">
+
+      <!-- top bar -->
+      <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid oklch(0.88 0.012 240);background:#fff">
+        <div style="display:flex;align-items:center;gap:16px">
+          <span style="font:600 19px/1 'IBM Plex Sans',sans-serif;letter-spacing:-.02em;color:oklch(0.24 0.02 250)">Well<span style="color:oklch(0.5 0.1 245)">Auth</span></span>
+          <span style="width:1px;height:18px;background:oklch(0.86 0.012 240)"></span>
+          <span style="font:400 12px/1 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">Worklist / Authorization</span>
+        </div>
+        <span style="font:500 11px/1 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">A. Reyes · Auth Coordinator</span>
+      </div>
+
+      <!-- context band -->
+      <div style="flex:none;padding:15px 20px;border-bottom:1px solid oklch(0.88 0.012 240);background:oklch(0.985 0.005 240);display:flex;align-items:center;gap:24px">
+        <div>
+          <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.6 0.02 245);margin-bottom:5px">Ordered service</div>
+          <div style="font:600 16px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;color:oklch(0.22 0.02 250)">Cardiac MRI with contrast</div>
+        </div>
+        <div style="width:1px;height:34px;background:oklch(0.88 0.012 240)"></div>
+        <div>
+          <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.6 0.02 245);margin-bottom:5px">Patient</div>
+          <div style="font:500 13px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">Jordan A. Rivera <span style="color:oklch(0.58 0.02 245);font-weight:400">· synthetic · Cardiology</span></div>
+        </div>
+        <div style="width:1px;height:34px;background:oklch(0.88 0.012 240)"></div>
+        <div>
+          <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.6 0.02 245);margin-bottom:5px">Scheduled</div>
+          <div style="font:600 13px/1.1 'IBM Plex Sans',sans-serif;color:{{ schedColor }}">Fri, Sep 18 · 9:30 AM</div>
+        </div>
+        <div style="width:1px;height:34px;background:oklch(0.88 0.012 240)"></div>
+        <div>
+          <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.6 0.02 245);margin-bottom:5px">Payer</div>
+          <div style="font:500 13px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">Northstar Health Plan</div>
+        </div>
+        <div style="margin-left:auto">
+          <span style="font:600 10.5px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;text-transform:uppercase;padding:9px 13px;border-radius:6px;background:{{ pillBg }};color:{{ pillColor }};border:1px solid {{ pillBorder }};display:inline-flex;align-items:center;gap:7px;transition:all .4s">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ pillColor }};flex:none"></span>{{ pillLabel }}
+          </span>
+        </div>
+      </div>
+
+      <!-- middle : requirements + right rail -->
+      <div style="flex:1;min-height:0;display:flex">
+
+        <!-- requirements / authorization basis -->
+        <div style="flex:1.95;min-width:0;display:flex;flex-direction:column;border-right:1px solid oklch(0.88 0.012 240)">
+          <div style="flex:none;padding:15px 22px 12px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <span style="font:600 12px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:oklch(0.28 0.02 250)">{{ reqHeading }}</span>
+            <sc-if value="{{ showReadinessBar }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:11px;min-width:260px">
+                <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:oklch(0.42 0.02 250);white-space:nowrap">{{ readinessLabel }}</span>
+                <div style="flex:1;height:5px;background:oklch(0.9 0.01 240);border-radius:3px;overflow:hidden"><div style="width:{{ readinessPct }};height:100%;background:{{ readinessColor }};border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)"></div></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ compactReqs }}" hint-placeholder-val="{{ false }}">
+              <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;color:oklch(0.4 0.1 155)">5 / 5 MET · EVIDENCE ATTACHED</span>
+            </sc-if>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow:auto;padding:0 22px 18px;display:flex;flex-direction:column;gap:8px">
+            <sc-if value="{{ reqsHidden }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:26px;border:1px dashed oklch(0.82 0.014 240);border-radius:6px;padding:34px;text-align:center">
+                <div style="font:500 13px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.5 0.02 245)">Payer requirements not yet discovered.</div>
+                <div style="font:400 11.5px/1.5 'IBM Plex Mono',monospace;color:oklch(0.6 0.02 245);margin-top:6px">The assistant can inspect the order and discover Northstar's requirements.</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ compactReqs }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:2px;display:flex;flex-wrap:wrap;gap:7px">
+                <sc-for list="{{ reqRows }}" as="r" hint-placeholder-count="5">
+                  <span style="font:500 11.5px/1 'IBM Plex Sans',sans-serif;color:oklch(0.34 0.02 250);padding:8px 12px;border:1px solid oklch(0.88 0.012 240);border-radius:6px;background:#fff;display:inline-flex;align-items:center;gap:7px"><span style="width:14px;height:14px;border-radius:4px;background:oklch(0.5 0.1 155);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font:700 9px/1 'IBM Plex Sans',sans-serif">✓</span>{{ r.name }}</span>
+                </sc-for>
+              </div>
+              <div style="font:400 11px/1.5 'IBM Plex Mono',monospace;color:oklch(0.58 0.02 245);margin-top:12px">Authorization basis · 5 authoritative items attached to Northstar's requirements. Unchanged through Act II.</div>
+            </sc-if>
+
+            <sc-if value="{{ showFullRows }}" hint-placeholder-val="{{ true }}">
+              <sc-for list="{{ reqRows }}" as="r" hint-placeholder-count="5">
+                <div style="border:1px solid {{ r.rowBorder }};background:{{ r.rowBg }};border-radius:6px;padding:12px 14px;display:flex;align-items:center;gap:13px;transition:background .5s,border-color .5s;animation:rowIn .5s both;animation-delay:{{ r.delay }}">
+                  <span style="width:16px;height:16px;border-radius:4px;flex:none;background:{{ r.dotBg }};border:2px solid {{ r.dotBorder }};display:flex;align-items:center;justify-content:center;color:#fff;font:700 10px/1 'IBM Plex Sans',sans-serif;transition:all .4s">{{ r.dotGlyph }}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font:600 14px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">{{ r.name }}</div>
+                    <sc-if value="{{ r.showEvidence }}" hint-placeholder-val="{{ true }}">
+                      <div style="font:400 11.5px/1.35 'IBM Plex Mono',monospace;color:oklch(0.5 0.02 245);margin-top:3px">↳ {{ r.evTitle }} · {{ r.evDate }} · {{ r.evSource }}<span style="color:oklch(0.5 0.1 245)"> · attached by assistant</span></div>
+                    </sc-if>
+                    <sc-if value="{{ r.searching }}" hint-placeholder-val="{{ false }}">
+                      <div style="font:400 11.5px/1.35 'IBM Plex Mono',monospace;color:oklch(0.5 0.11 30);margin-top:3px">not yet supported · searching authorized record<span style="animation:pulseDot 1.1s infinite">…</span></div>
+                    </sc-if>
+                    <sc-if value="{{ r.pending }}" hint-placeholder-val="{{ false }}">
+                      <div style="font:400 11.5px/1.35 'IBM Plex Mono',monospace;color:oklch(0.6 0.02 245);margin-top:3px">awaiting supporting evidence</div>
+                    </sc-if>
+                    <sc-if value="{{ r.unavailable }}" hint-placeholder-val="{{ false }}">
+                      <div style="font:400 11.5px/1.35 'IBM Plex Mono',monospace;color:oklch(0.5 0.13 30);margin-top:3px">required evidence not found in the authorized record</div>
+                    </sc-if>
+                  </div>
+                  <span style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:{{ r.statusColor }};flex:none">{{ r.statusLabel }}</span>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- right rail : assistant + activity -->
+        <div style="flex:1;min-width:300px;max-width:360px;display:flex;flex-direction:column;background:oklch(0.978 0.005 240)">
+          <div style="flex:none;padding:15px 18px;border-bottom:1px solid oklch(0.88 0.012 240)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+              <span style="font:600 12px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:oklch(0.28 0.02 250)">Assistant</span>
+              <span style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;padding:5px 8px;border-radius:5px;background:{{ verbBg }};color:{{ verbColor }};transition:all .3s">{{ assistVerb }}</span>
+            </div>
+            <div style="font:500 9px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:9px">Available actions</div>
+            <sc-if value="{{ hasActions }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ assistActions }}" as="a" hint-placeholder-count="2">
+                  <span style="font:500 11px/1 'IBM Plex Mono',monospace;padding:7px 10px;border-radius:5px;border:1px solid {{ a.border }};background:{{ a.bg }};color:{{ a.color }};display:inline-flex;align-items:center;gap:6px;animation:{{ a.anim }}">
+                    <sc-if value="{{ a.isNew }}" hint-placeholder-val="{{ false }}"><span style="font:700 8px/1 'IBM Plex Mono',monospace;letter-spacing:.04em;padding:3px 5px;border-radius:3px;background:oklch(0.5 0.1 245);color:#fff;flex:none">NEW</span></sc-if>
+                    <sc-if value="{{ a.dot }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:oklch(0.5 0.1 245);flex:none"></span></sc-if>
+                    {{ a.label }}
+                  </span>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hasBlocked }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:2px;font:500 10.5px/1.45 'IBM Plex Mono',monospace;color:oklch(0.5 0.12 30);padding:9px 11px;background:oklch(0.98 0.02 35);border:1px solid oklch(0.86 0.07 40);border-radius:5px">{{ blockedNote }}</div>
+            </sc-if>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:15px 18px 0">
+            <div style="font:600 12px/1 'IBM Plex Sans',sans-serif;letter-spacing:.02em;color:oklch(0.28 0.02 250);margin-bottom:12px">Activity</div>
+            <div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:16px">
+              <sc-for list="{{ activity }}" as="e" hint-placeholder-count="3">
+                <div style="display:flex;gap:10px;animation:softIn .4s both">
+                  <span style="width:8px;height:8px;border-radius:50%;background:{{ e.dot }};flex:none;margin-top:4px"></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font:400 12px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250)"><span style="font-weight:600;color:{{ e.actorColor }}">{{ e.actor }}</span> {{ e.text }}</div>
+                    <sc-if value="{{ e.showTime }}" hint-placeholder-val="{{ true }}"><div style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:oklch(0.62 0.02 245);margin-top:3px">{{ e.time }}</div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- lower region : transforms across both acts -->
+      <div style="flex:none;border-top:1px solid oklch(0.88 0.012 240);background:#fff;transition:all .4s">
+
+        <!-- PRE (0-3) -->
+        <sc-if value="{{ isPre }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:16px 22px;display:flex;align-items:center;gap:14px;min-height:66px">
+            <span style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.6 0.02 245)">Submission</span>
+            <span style="width:1px;height:20px;background:oklch(0.88 0.012 240)"></span>
+            <span style="font:500 13px/1.4 'IBM Plex Sans',sans-serif;color:{{ preColor }}">{{ preMsg }}</span>
+            <sc-if value="{{ isReady }}" hint-placeholder-val="{{ false }}">
+              <span style="margin-left:auto;font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;padding:8px 12px;border-radius:6px;background:oklch(0.96 0.04 245);color:oklch(0.42 0.1 245);border:1px solid oklch(0.85 0.06 245)">Assistant action ready · Prepare submission</span>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- REVIEW (4) -->
+        <sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 22px 18px;animation:softIn .45s both">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:13px">
+              <span style="font:600 12px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Proposed disclosure</span>
+              <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">review before approving · the assistant cannot submit</span>
+            </div>
+            <div style="display:flex;gap:20px;align-items:stretch">
+              <div style="flex:1.5;min-width:0">
+                <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:8px">5 evidence items · why each is included</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px">
+                  <sc-for list="{{ reviewItems }}" as="i" hint-placeholder-count="5">
+                    <div style="display:flex;gap:8px;align-items:baseline;padding:4px 0">
+                      <span style="width:5px;height:5px;border-radius:50%;background:oklch(0.5 0.1 155);flex:none;transform:translateY(-2px)"></span>
+                      <div><span style="font:600 12px/1.25 'IBM Plex Sans',sans-serif;color:oklch(0.26 0.02 250)">{{ i.name }}</span><span style="font:400 11px/1.3 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)"> — {{ i.reason }}</span></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="width:1px;background:oklch(0.9 0.01 240);flex:none"></div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;gap:24px">
+                  <div><div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Destination</div><div style="font:500 12px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">Northstar Health Plan</div></div>
+                  <div><div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Purpose</div><div style="font:500 12px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">Prior authorization</div></div>
+                </div>
+                <div style="font:400 11px/1.45 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)"><span style="color:oklch(0.62 0.02 245);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Excluded · </span>unrelated encounters, medications, and history outside Northstar's stated criteria.</div>
+                <div style="margin-top:auto;display:flex;align-items:center;gap:14px">
+                  <button onClick="{{ advance }}" style="font:600 14px/1 'IBM Plex Sans',sans-serif;padding:14px 26px;border:none;border-radius:6px;background:oklch(0.45 0.11 245);color:#fff;cursor:pointer;box-shadow:0 2px 8px oklch(0.45 0.11 245 / .28)">Approve submission</button>
+                  <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);max-width:26ch">Approving does not transmit — it authorizes the assistant to submit this exact prepared version.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- APPROVED (5) -->
+        <sc-if value="{{ isApproved }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;display:flex;align-items:center;gap:16px;min-height:66px;animation:softIn .45s both">
+            <span style="width:34px;height:34px;border-radius:50%;background:oklch(0.5 0.1 155);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font:700 16px/1 'IBM Plex Sans',sans-serif">✓</span>
+            <div>
+              <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Approved for submission</div>
+              <div style="font:400 11.5px/1.3 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);margin-top:3px">Authorized by A. Reyes · 09:43 · bound to prepared packet rev. 3</div>
+            </div>
+            <span style="margin-left:auto;font:500 12px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.1 245)">The assistant can now submit.</span>
+          </div>
+        </sc-if>
+
+        <!-- SUBMITTED (6) -->
+        <sc-if value="{{ isSubmitted }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;min-height:66px;animation:softIn .45s both">
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(0.6 0.1 70);flex:none;animation:pulseDot 1.1s infinite"></span>
+              <div>
+                <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Submitted to simulated payer · pending</div>
+                <div style="font:400 11.5px/1.3 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);margin-top:3px">Monitoring Northstar for a response…</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;position:relative;height:4px;background:oklch(0.92 0.01 240);border-radius:2px;overflow:hidden"><span style="position:absolute;top:0;width:38%;height:100%;background:oklch(0.6 0.1 70);border-radius:2px;animation:barSlide 1.4s infinite linear"></span></div>
+          </div>
+        </sc-if>
+
+        <!-- COVERAGE GAP (7,8) -->
+        <sc-if value="{{ isGap }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 22px 18px;animation:softIn .45s both">
+            <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.5 0.02 245);margin-bottom:13px">Simulated payer response</div>
+            <div style="display:flex;align-items:stretch;gap:22px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:30px;height:30px;border-radius:50%;background:oklch(0.5 0.1 155);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font:700 14px/1 'IBM Plex Sans',sans-serif">✓</span>
+                <div>
+                  <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Payer decision</div>
+                  <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Approved</div>
+                </div>
+              </div>
+              <div style="width:1px;background:oklch(0.9 0.01 240)"></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:30px;height:30px;border-radius:50%;background:oklch(0.97 0.05 55);border:2px solid oklch(0.7 0.11 55);flex:none;display:flex;align-items:center;justify-content:center;color:oklch(0.5 0.13 50);font:700 15px/1 'IBM Plex Sans',sans-serif">!</span>
+                <div>
+                  <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Coverage of scheduled service</div>
+                  <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.5 0.13 50)">Does not cover scheduled date</div>
+                </div>
+              </div>
+              <div style="margin-left:auto;align-self:center;text-align:right">
+                <div style="font:400 11px/1.5 'IBM Plex Mono',monospace;color:oklch(0.5 0.02 245)">Authorization valid through <strong style="color:oklch(0.3 0.02 250)">Sep 12</strong> · MRI scheduled <strong style="color:oklch(0.5 0.13 50)">Sep 18</strong></div>
+                <div style="font:400 11px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.55 0.02 245);margin-top:3px">The payer approved, but the ordered care remains administratively blocked.</div>
+              </div>
+            </div>
+            <sc-if value="{{ gapActionReady }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;padding-top:13px;border-top:1px solid oklch(0.92 0.01 240);display:flex;align-items:center;gap:12px">
+                <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;padding:8px 12px;border-radius:6px;background:oklch(0.96 0.04 245);color:oklch(0.42 0.1 245);border:1px solid oklch(0.85 0.06 245)">Assistant action ready · Resolve authorization window</span>
+                <span style="font:400 11.5px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.5 0.02 245)">WellAuth evaluated the payer result against the scheduled service and exposed a new bounded action.</span>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- REMEDIATION REVIEW (9) -->
+        <sc-if value="{{ isRemReview }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 22px 18px;animation:softIn .45s both">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:13px">
+              <span style="font:600 12px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Proposed remediation — authorization window</span>
+              <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">review before approving · the assistant cannot submit</span>
+            </div>
+            <div style="display:flex;gap:20px;align-items:stretch">
+              <div style="flex:1.5;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:12px 18px">
+                <div><div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Current authorization</div><div style="font:500 12.5px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.3 0.02 250)">Valid through Sep 12</div></div>
+                <div><div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Scheduled MRI</div><div style="font:500 12.5px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.5 0.13 50)">Sep 18</div></div>
+                <div><div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Requested change</div><div style="font:600 12.5px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.1 245)">Extend validity through Oct 3</div></div>
+                <div><div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Reason</div><div style="font:400 11.5px/1.35 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250)">Scheduled service falls outside the current authorization window.</div></div>
+              </div>
+              <div style="width:1px;background:oklch(0.9 0.01 240);flex:none"></div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:9px">
+                <div style="font:400 11px/1.45 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)"><span style="color:oklch(0.62 0.02 245);text-transform:uppercase;letter-spacing:.06em;font-weight:600">Unchanged · </span>ordered service, clinical evidence, and medical intent. Administrative correction only — no clinical reconsideration.</div>
+                <div style="margin-top:auto;display:flex;align-items:center;gap:14px">
+                  <button onClick="{{ advance }}" style="font:600 14px/1 'IBM Plex Sans',sans-serif;padding:14px 24px;border:none;border-radius:6px;background:oklch(0.45 0.11 245);color:#fff;cursor:pointer;box-shadow:0 2px 8px oklch(0.45 0.11 245 / .28)">Approve extension request</button>
+                  <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);max-width:24ch">Approving does not transmit — it authorizes the assistant to submit this exact request.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- REMEDIATION APPROVED (10) -->
+        <sc-if value="{{ isRemApproved }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;display:flex;align-items:center;gap:16px;min-height:66px;animation:softIn .45s both">
+            <span style="width:34px;height:34px;border-radius:50%;background:oklch(0.5 0.1 155);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font:700 16px/1 'IBM Plex Sans',sans-serif">✓</span>
+            <div>
+              <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Extension approved for submission</div>
+              <div style="font:400 11.5px/1.3 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);margin-top:3px">Authorized by A. Reyes · 09:49 · bound to remediation rev. 1</div>
+            </div>
+            <span style="margin-left:auto;font:500 12px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.1 245)">The assistant can now submit the extension.</span>
+          </div>
+        </sc-if>
+
+        <!-- REMEDIATION SUBMITTED (11) -->
+        <sc-if value="{{ isRemSubmitted }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;min-height:66px;animation:softIn .45s both">
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(0.6 0.1 70);flex:none;animation:pulseDot 1.1s infinite"></span>
+              <div>
+                <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Remediation submitted to simulated payer · pending</div>
+                <div style="font:400 11.5px/1.3 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);margin-top:3px">Monitoring Northstar for an updated authorization…</div>
+              </div>
+            </div>
+            <div style="margin-top:12px;position:relative;height:4px;background:oklch(0.92 0.01 240);border-radius:2px;overflow:hidden"><span style="position:absolute;top:0;width:38%;height:100%;background:oklch(0.6 0.1 70);border-radius:2px;animation:barSlide 1.4s infinite linear"></span></div>
+          </div>
+        </sc-if>
+
+        <!-- ALIGNED (12) -->
+        <sc-if value="{{ isAligned }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 22px 18px;animation:softIn .45s both">
+            <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.09em;text-transform:uppercase;color:oklch(0.45 0.1 155);margin-bottom:12px">Simulated payer · authorization updated</div>
+            <div style="display:flex;align-items:center;gap:22px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:32px;height:32px;border-radius:50%;background:oklch(0.5 0.1 155);flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font:700 15px/1 'IBM Plex Sans',sans-serif">✓</span>
+                <div>
+                  <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Scheduled MRI</div>
+                  <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.1 155)">Covered by authorization</div>
+                </div>
+              </div>
+              <div style="width:1px;height:34px;background:oklch(0.9 0.01 240)"></div>
+              <div>
+                <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.07em;text-transform:uppercase;color:oklch(0.62 0.02 245);margin-bottom:4px">Administrative readiness</div>
+                <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Ready</div>
+              </div>
+              <div style="margin-left:auto;text-align:right">
+                <div style="font:500 12px/1 'IBM Plex Mono',monospace;color:oklch(0.42 0.1 155)">#NS-40192 · EXT</div>
+                <div style="font:400 11px/1.5 'IBM Plex Mono',monospace;color:oklch(0.5 0.02 245);margin-top:4px">Valid through Oct 3 · covers Sep 18 MRI</div>
+                <div style="font:400 10px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.58 0.02 245);margin-top:3px">Administrative alignment only — not a clinical determination.</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- REFUSAL (13) -->
+        <sc-if value="{{ isRefusal }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:18px 22px;min-height:66px;animation:softIn .45s both">
+            <div style="display:flex;align-items:center;gap:13px">
+              <span style="width:30px;height:30px;border-radius:50%;background:oklch(0.97 0.04 35);border:2px solid oklch(0.7 0.11 40);flex:none;display:flex;align-items:center;justify-content:center;color:oklch(0.5 0.13 35);font:700 15px/1 'IBM Plex Sans',sans-serif">!</span>
+              <div style="flex:1">
+                <div style="font:600 15px/1.1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250)">Cannot prepare submission</div>
+                <div style="font:400 11.5px/1.35 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);margin-top:3px">Required evidence not found in the authorized record. No prepare, approval, or submission action is available until the requirement is met.</div>
+              </div>
+              <span style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;padding:8px 12px;border-radius:6px;background:oklch(0.98 0.02 35);color:oklch(0.5 0.12 35);border:1px solid oklch(0.86 0.07 40);white-space:nowrap">Blocking · Clinical assessment</span>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HANDOFF REFERENCE (design docs, not product) ============ -->
+  <div style="width:1520px;max-width:100%;margin-top:20px;display:flex;flex-direction:column;gap:16px">
+
+    <!-- A verdict -->
+    <div style="background:oklch(0.24 0.02 250);border-radius:8px;padding:22px 26px;display:flex;align-items:center;gap:22px;flex-wrap:wrap">
+      <div>
+        <div style="font:600 10px/1 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;color:oklch(0.72 0.05 245);margin-bottom:8px">A · Final design verdict</div>
+        <div style="font:600 22px/1.1 'IBM Plex Sans',sans-serif;letter-spacing:-.01em;color:#fff">READY FOR IMPLEMENTATION</div>
+      </div>
+      <div style="flex:1;min-width:300px;font:400 12.5px/1.6 'IBM Plex Sans',sans-serif;color:oklch(0.85 0.02 245)">Act II is depth within the locked workspace — no new surfaces, nav, or modules. Two open confirmations, neither blocking: (1) verify the canonical fixture dates (Sep 12 / Sep 18 / Oct 3) match engineering's; (2) confirm the remediation capability noun <strong style="color:#fff">Resolve authorization window</strong> over alternatives. Build may proceed against these as defaults.</div>
+    </div>
+
+    <!-- B delta -->
+    <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+      <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:14px">B · Delta from the Act I workspace</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 26px">
+        <sc-for list="{{ delta }}" as="d" hint-placeholder-count="6">
+          <div style="display:flex;gap:9px;align-items:baseline"><span style="font:600 11px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245);flex:none">Δ</span><span style="font:400 12px/1.5 'IBM Plex Sans',sans-serif;color:oklch(0.38 0.02 250)">{{ d }}</span></div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- E Act II grammar -->
+    <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+      <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:4px">E · Act II interaction grammar</div>
+      <div style="font:400 11.5px/1.5 'IBM Plex Sans',sans-serif;color:oklch(0.5 0.02 245);margin-bottom:14px">Each new state: trigger → assistant → visible action → human? → WebMCP capability change → lower region → activity.</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ grammar }}" as="g" hint-placeholder-count="6">
+          <div style="border:1px solid oklch(0.91 0.008 240);border-radius:6px;padding:13px 15px">
+            <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:9px">
+              <span style="font:600 10px/1 'IBM Plex Mono',monospace;color:oklch(0.5 0.1 245)">{{ g.code }}</span>
+              <span style="font:600 12.5px/1.2 'IBM Plex Sans',sans-serif;color:oklch(0.26 0.02 250)">{{ g.name }}</span>
+              <span style="margin-left:auto;font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.05em;text-transform:uppercase;padding:4px 8px;border-radius:4px;background:{{ g.humanBg }};color:{{ g.humanColor }}">{{ g.human }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 18px">
+              <div><span style="font:600 8.5px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.62 0.02 245)">Trigger</span><div style="font:400 11px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250);margin-top:2px">{{ g.trigger }}</div></div>
+              <div><span style="font:600 8.5px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.62 0.02 245)">Capability change</span><div style="font:400 11px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250);margin-top:2px">{{ g.cap }}</div></div>
+              <div><span style="font:600 8.5px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:oklch(0.62 0.02 245)">Lower region</span><div style="font:400 11px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250);margin-top:2px">{{ g.region }}</div></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- F motion -->
+    <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+      <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:14px">F · Motion specification — Act I + Act II</div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ motion }}" as="m" hint-placeholder-count="11">
+          <div style="display:grid;grid-template-columns:200px 1fr 130px;gap:16px;padding:10px 0;border-top:1px solid oklch(0.93 0.008 240);align-items:baseline">
+            <span style="font:600 12px/1.3 'IBM Plex Sans',sans-serif;color:oklch(0.26 0.02 250)"><span style="color:oklch(0.5 0.1 245);font-family:'IBM Plex Mono',monospace;font-size:11px">{{ m.act }} </span>{{ m.name }}</span>
+            <span style="font:400 11.5px/1.5 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250)">{{ m.behavior }}</span>
+            <span style="font:500 10px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">{{ m.timing }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- G copy -->
+      <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+        <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:14px">G · Copy sheet — recommended terminology</div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ copy }}" as="c" hint-placeholder-count="8">
+            <div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:baseline;border-bottom:1px solid oklch(0.94 0.006 240);padding-bottom:8px">
+              <span style="font:500 10px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">{{ c.label }}</span>
+              <span style="font:500 12px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.28 0.02 250)">{{ c.val }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- H tokens -->
+      <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+        <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:14px">H · Design tokens</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ tokens }}" as="t" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:15px 132px 1fr;gap:9px;align-items:center">
+              <span style="width:14px;height:14px;border-radius:3px;background:{{ t.swatch }};border:1px solid oklch(0.88 0.012 240);flex:none"></span>
+              <span style="font:500 10.5px/1.3 'IBM Plex Mono',monospace;color:oklch(0.42 0.02 250)">{{ t.name }}</span>
+              <span style="font:400 10px/1.3 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.val }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- I viewport + J a11y -->
+      <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+        <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:6px">I · 1600×900 viewport audit <span style="font:600 9px/1 'IBM Plex Mono',monospace;color:oklch(0.4 0.1 155);letter-spacing:.05em;margin-left:6px">PASS</span></div>
+        <div style="font:400 11.5px/1.55 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.02 250);margin-bottom:16px">Workspace is 1520×832 within 1600×900. No horizontal scroll. Requirements compact to a basis strip after submission, giving Act II vertical room; context band keeps scheduled date + payer visible throughout.</div>
+        <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:12px">J · Accessibility audit</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ a11y }}" as="x" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:baseline"><span style="font:500 10px/1.4 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">{{ x.area }}</span><span style="font:400 11.5px/1.5 'IBM Plex Sans',sans-serif;color:oklch(0.4 0.02 250)">{{ x.note }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <!-- K handoff -->
+      <div style="background:#fff;border:1px solid oklch(0.88 0.012 240);border-radius:8px;padding:22px 24px">
+        <div style="font:600 13px/1 'IBM Plex Sans',sans-serif;color:oklch(0.24 0.02 250);margin-bottom:14px">K · Frontend implementation contract</div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ handoff }}" as="h" hint-placeholder-count="6">
+            <div><span style="font:600 11px/1.4 'IBM Plex Sans',sans-serif;color:oklch(0.28 0.02 250)">{{ h.area }} · </span><span style="font:400 11.5px/1.5 'IBM Plex Sans',sans-serif;color:oklch(0.42 0.02 250)">{{ h.note }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="font:400 11px/1.5 'IBM Plex Mono',monospace;color:oklch(0.55 0.02 245)">C · This live workspace is the implementation-ready canonical screen. D · Step the control above through all 14 state variants (one layout). Refusal is a separate branch, not part of the linear flow.</div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { step: 0, toastShown: false, toastStep: -1 };
+
+  componentDidMount() {
+    this._key = (e) => {
+      if (e.key === "ArrowRight") this.go(this.state.step + 1);
+      else if (e.key === "ArrowLeft") this.go(this.state.step - 1);
+    };
+    window.addEventListener("keydown", this._key);
+  }
+  componentWillUnmount() { window.removeEventListener("keydown", this._key); clearTimeout(this._t); }
+
+  go = (i) => {
+    const step = Math.max(0, Math.min(13, i));
+    if (step === this.state.step) return;
+    const TOASTS = { 1: 1, 3: 1, 5: 1, 7: 1, 8: 1, 10: 1, 12: 1 };
+    if (TOASTS[step]) {
+      this.setState({ step, toastShown: true, toastStep: step });
+      clearTimeout(this._t);
+      this._t = setTimeout(() => this.setState({ toastShown: false }), 3200);
+    } else {
+      this.setState({ step, toastShown: false });
+    }
+  };
+  next = () => this.go(this.state.step + 1);
+  prev = () => this.go(this.state.step - 1);
+
+  renderVals() {
+    const step = this.state.step;
+    const ink = "oklch(0.24 0.02 250)", accent = "oklch(0.5 0.1 245)", muted = "oklch(0.55 0.02 245)";
+    const green = "oklch(0.5 0.1 155)", amber = "oklch(0.6 0.1 70)", warn = "oklch(0.5 0.13 50)", slate = "oklch(0.45 0.02 250)";
+
+    const REQS = [
+      { name: "Current cardiology order", evTitle: "Cardiology order — Cardiac MRI w/ contrast", evDate: "Aug 22", evSource: "Cardiology", reason: "establishes the ordered service" },
+      { name: "Relevant diagnosis", evTitle: "Diagnosis — nonischemic cardiomyopathy", evDate: "Aug 20", evSource: "Cardiology", reason: "supports the medical indication" },
+      { name: "Recent echocardiogram", evTitle: "Echocardiogram report", evDate: "Mar 3", evSource: "Cardiology", reason: "recent baseline imaging" },
+      { name: "Prior inconclusive study", evTitle: "Cardiac CT — inconclusive", evDate: "Feb 14", evSource: "Radiology", reason: "prior diagnostic workup" },
+      { name: "Clinical assessment", evTitle: "Clinical assessment — indication documented", evDate: "Feb 28", evSource: "Cardiology · inpatient", reason: "documents indication per payer criterion" },
+    ];
+
+    // ---- status pill ----
+    const PILL = [
+      { l: "Prior authorization required", t: "amber" }, { l: "Prior authorization required", t: "amber" },
+      { l: "Prior authorization required", t: "amber" }, { l: "Prior authorization required", t: "amber" },
+      { l: "Prepared for review", t: "accent" }, { l: "Approved for submission", t: "accent" },
+      { l: "Submitted · pending", t: "amber" },
+      { l: "Approved · window mismatch", t: "warn" }, { l: "Window mismatch · action needed", t: "warn" },
+      { l: "Remediation prepared", t: "accent" }, { l: "Extension approved", t: "accent" },
+      { l: "Extension submitted · pending", t: "amber" }, { l: "Authorization aligned", t: "green" },
+      { l: "Prior authorization required", t: "amber" },
+    ][step];
+    const TONES = {
+      amber: { bg: "oklch(0.97 0.03 70)", color: "oklch(0.48 0.11 70)", border: "oklch(0.85 0.07 70)" },
+      accent: { bg: "oklch(0.96 0.04 245)", color: "oklch(0.42 0.1 245)", border: "oklch(0.85 0.06 245)" },
+      green: { bg: "oklch(0.96 0.05 155)", color: "oklch(0.4 0.1 155)", border: "oklch(0.84 0.07 155)" },
+      warn: { bg: "oklch(0.97 0.05 55)", color: "oklch(0.5 0.13 50)", border: "oklch(0.84 0.09 52)" },
+    };
+    const pill = TONES[PILL.t];
+    const schedColor = (step === 7 || step === 8 || step === 9) ? warn : ink;
+
+    // ---- requirements ----
+    const reqStatus = (idx) => {
+      if (step === 0) return "hidden";
+      if (step === 13) return idx < 4 ? "met" : "unavailable";
+      if (step === 1) return "pending";
+      if (step === 2) return idx < 4 ? "met" : "searching";
+      return "met";
+    };
+    const reqRows = (step === 0 ? [] : REQS).map((r, idx) => {
+      const st = reqStatus(idx);
+      const met = st === "met", searching = st === "searching", pending = st === "pending", unavailable = st === "unavailable";
+      const bad = searching || unavailable;
+      return {
+        name: r.name, evTitle: r.evTitle, evDate: r.evDate, evSource: r.evSource,
+        delay: (idx * 0.07).toFixed(2) + "s",
+        showEvidence: met, searching, pending, unavailable,
+        rowBg: bad ? "oklch(0.99 0.02 40)" : "#fff",
+        rowBorder: bad ? "oklch(0.86 0.08 40)" : "oklch(0.88 0.012 240)",
+        dotBg: met ? green : "transparent",
+        dotBorder: met ? green : (bad ? warn : "oklch(0.78 0.014 240)"),
+        dotGlyph: met ? "✓" : "",
+        statusLabel: met ? "MET" : (bad ? "OPEN" : "UNMET"),
+        statusColor: met ? green : (bad ? warn : muted),
+      };
+    });
+    const reqsHidden = step === 0;
+    const compactReqs = step >= 6 && step <= 12;
+    const showFullRows = !reqsHidden && !compactReqs;
+    const reqHeading = compactReqs ? "Authorization basis" : "Requirements";
+
+    // ---- readiness ----
+    const READ = [null, [0, 5], [4, 5], [5, 5], [5, 5], [5, 5], [5, 5], [5, 5], [5, 5], [5, 5], [5, 5], [5, 5], [5, 5], [4, 5]][step];
+    const showReadinessBar = !!READ && !compactReqs;
+    const readinessLabel = READ ? `READINESS · ${READ[0]} / ${READ[1]} MET` : "";
+    const readinessPct = READ ? (READ[0] / READ[1] * 100) + "%" : "0%";
+    const readinessColor = READ && READ[0] === READ[1] ? green : accent;
+
+    // ---- assistant module ----
+    // labels + availability mirror the contract's availableTools + §3.2 wording per state
+    const A = [
+      { verb: "Ready", vt: "n", acts: [["Review order context"], ["Discover payer requirements"]] },
+      { verb: "Working", vt: "w", acts: [["Review order context"], ["Find supporting evidence", "u"], ["Inspect evidence"], ["Attach existing evidence"]] },
+      { verb: "Working", vt: "w", acts: [["Find supporting evidence"], ["Inspect evidence"], ["Attach existing evidence"], ["Remove attached evidence"]] },
+      { verb: "Ready", vt: "n", acts: [["Attach existing evidence"], ["Prepare submission", "u"]] },
+      { verb: "Blocked", vt: "b", blocked: "No submission action available · awaiting your approval. Evidence tools remain — editing would invalidate the prepared packet.", acts: [["Review order context"], ["Find supporting evidence"], ["Inspect evidence"], ["Attach existing evidence"], ["Remove attached evidence"]] },
+      { verb: "Ready to submit", vt: "n", acts: [["Submit to payer", "new"]] },
+      { verb: "Monitoring", vt: "n", acts: [["Review order context"], ["Check authorization status"]] },
+      { verb: "Reviewing", vt: "w", acts: [["Review order context"], ["Check authorization status"]] },
+      { verb: "Ready", vt: "n", acts: [["Check authorization status"], ["Resolve authorization window", "new"]] },
+      { verb: "Blocked", vt: "b", blocked: "No submission action available · awaiting your approval.", acts: [["Review order context"], ["Check authorization status"]] },
+      { verb: "Ready to submit", vt: "n", acts: [["Check authorization status"], ["Submit extension", "new"]] },
+      { verb: "Monitoring", vt: "n", acts: [["Review order context"], ["Check authorization status"]] },
+      { verb: "Idle", vt: "n", acts: [["Review order context"], ["Check authorization status"]] },
+      { verb: "Blocked", vt: "b", blocked: "No prepare action available · required evidence does not exist. The assistant may keep searching but cannot progress.", acts: [["Find supporting evidence"], ["Inspect evidence"], ["Attach existing evidence"], ["Remove attached evidence"]] },
+    ][step];
+    const VERB = {
+      n: { bg: "oklch(0.94 0.01 240)", color: "oklch(0.42 0.02 250)" },
+      w: { bg: "oklch(0.96 0.04 245)", color: "oklch(0.42 0.1 245)" },
+      b: { bg: "oklch(0.97 0.04 40)", color: "oklch(0.5 0.13 40)" },
+    }[A.vt];
+    const assistActions = A.acts.map(([label, flag]) => {
+      const u = flag === "u", isNew = flag === "new", hi = u || isNew;
+      return {
+        label, dot: u, isNew,
+        border: hi ? accent : "oklch(0.86 0.012 240)",
+        bg: hi ? "oklch(0.97 0.03 245)" : "#fff",
+        color: hi ? "oklch(0.4 0.1 245)" : "oklch(0.4 0.02 250)",
+        anim: hi ? "chipPop .45s both" : "none",
+      };
+    });
+    const hasActions = A.acts.length > 0;
+    const hasBlocked = !!A.blocked;
+
+    // ---- activity ----
+    const KIND = { a: { dot: accent, ac: accent }, h: { dot: ink, ac: ink }, p: { dot: green, ac: green }, s: { dot: slate, ac: slate } };
+    // Timestamps only where a durable per-event time exists in the snapshot:
+    // bindings[].boundAt, approval.at, remediation.approval.at. Others derive from
+    // state presence and render without a per-event time (contract §5 / Gap C-3).
+    const FLOW = [
+      { s: 0, k: "a", actor: "Assistant", text: "reviewed the ordered service", time: "" },
+      { s: 1, k: "a", actor: "Assistant", text: "discovered 5 payer requirements", time: "" },
+      { s: 2, k: "a", actor: "Assistant", text: "attached evidence to 4 requirements", time: "09:41" },
+      { s: 2, k: "a", actor: "Assistant", text: "searching authorized record for clinical assessment", time: "" },
+      { s: 3, k: "a", actor: "Assistant", text: "located clinical assessment in authorized record", time: "" },
+      { s: 3, k: "a", actor: "Assistant", text: "attached evidence · 5 of 5 requirements met", time: "09:42" },
+      { s: 4, k: "a", actor: "Assistant", text: "prepared submission for review", time: "" },
+      { s: 5, k: "h", actor: "A. Reyes", text: "approved submission", time: "09:43" },
+      { s: 6, k: "a", actor: "Assistant", text: "submitted authorization to Northstar (simulated)", time: "" },
+      { s: 7, k: "p", actor: "Simulated payer", text: "returned Approved", time: "" },
+      { s: 7, k: "s", actor: "WellAuth", text: "detected authorization-window mismatch", time: "" },
+      { s: 8, k: "s", actor: "WellAuth", text: "enabled authorization-window remediation", time: "" },
+      { s: 9, k: "a", actor: "Assistant", text: "prepared authorization-window remediation", time: "" },
+      { s: 10, k: "h", actor: "A. Reyes", text: "approved extension request", time: "09:49" },
+      { s: 11, k: "a", actor: "Assistant", text: "submitted extension to Northstar (simulated)", time: "" },
+      { s: 12, k: "p", actor: "Simulated payer", text: "updated authorization validity", time: "" },
+    ];
+    const REFUSAL_FLOW = [
+      { k: "a", actor: "Assistant", text: "discovered 5 payer requirements", time: "" },
+      { k: "a", actor: "Assistant", text: "attached evidence to 4 requirements", time: "09:41" },
+      { k: "a", actor: "Assistant", text: "searched authorized record — clinical assessment not found", time: "" },
+      { k: "s", actor: "WellAuth", text: "cannot prepare — required evidence unavailable", time: "" },
+    ];
+    const rawAct = step === 13 ? REFUSAL_FLOW : FLOW.filter(e => e.s <= step);
+    const activity = rawAct.slice().reverse().map(e => ({
+      actor: e.actor, text: e.text, time: e.time, showTime: !!e.time, dot: KIND[e.k].dot, actorColor: KIND[e.k].ac,
+    }));
+
+    // ---- lower region ----
+    const isPre = step <= 3, isReady = step === 3, isReview = step === 4, isApproved = step === 5, isSubmitted = step === 6;
+    const isGap = step === 7 || step === 8, gapActionReady = step === 8;
+    const isRemReview = step === 9, isRemApproved = step === 10, isRemSubmitted = step === 11, isAligned = step === 12, isRefusal = step === 13;
+    const preMsg = [
+      "Discover the payer requirements to begin.",
+      "Attach authoritative evidence to each requirement to build readiness.",
+      "4 of 5 requirements met — one requirement still needs supporting evidence.",
+      "All 5 requirements met. The assistant can now prepare the submission for your review.",
+    ][step];
+    const preColor = step === 3 ? "oklch(0.34 0.02 250)" : muted;
+    const reviewItems = REQS.map(r => ({ name: r.name, reason: r.reason }));
+
+    // ---- toast ----
+    const TT = {
+      1: { text: "WebMCP action unlocked · Find supporting evidence", glyph: "◆", kind: "mcp" },
+      3: { text: "WebMCP action unlocked · Prepare submission", glyph: "◆", kind: "mcp" },
+      5: { text: "WebMCP action unlocked · Submit to payer", glyph: "◆", kind: "mcp" },
+      7: { text: "Simulated payer response received · review required", glyph: "●", kind: "payer" },
+      8: { text: "WebMCP action unlocked · Resolve authorization window", glyph: "◆", kind: "mcp" },
+      10: { text: "WebMCP action unlocked · Submit extension", glyph: "◆", kind: "mcp" },
+      12: { text: "Simulated payer updated authorization", glyph: "●", kind: "payer" },
+    }[this.state.toastStep] || { text: "", glyph: "", kind: "mcp" };
+    const toastShown = this.state.toastShown;
+    const toastBg = TT.kind === "payer" ? "oklch(0.4 0.09 155)" : "oklch(0.3 0.05 250)";
+    const toastColor = TT.kind === "payer" ? "oklch(0.95 0.03 155)" : "#fff";
+
+    // ---- demo nav ----
+    const CODES = ["REQUIRED", "REQUIREMENTS_DISCOVERED", "EVIDENCE_PARTIAL_4_OF_5", "REQUIREMENTS_MET_5_OF_5", "PREPARED_AWAITING_APPROVAL", "APPROVED", "SUBMITTED", "PAYER_APPROVED_WINDOW_MISMATCH", "REMEDIATION_AVAILABLE", "REMEDIATION_PREPARED", "REMEDIATION_APPROVED", "REMEDIATION_SUBMITTED", "AUTHORIZATION_ALIGNED", "REFUSAL_MISSING_EVIDENCE"];
+    const SHORT = ["Required", "Discovered", "4 of 5", "5 of 5", "Prepared", "Approved", "Submitted", "Window mismatch", "Remediation", "Ext. prepared", "Ext. approved", "Ext. submitted", "Aligned", "Refusal"];
+    // prototype beat readout (step 13 is the refusal variant, shown as R)
+    const beatNum = step === 13 ? "R" : String(step + 1).padStart(2, "0");
+    const beatTotal = "13";
+    const beatName = SHORT[step];
+    const beatAct = step === 13 ? "Variant" : (step <= 6 ? "Act I" : "Act II");
+    const beatActColor = step === 13 ? "oklch(0.72 0.11 30)" : (step <= 6 ? "oklch(0.72 0.05 260)" : "oklch(0.72 0.08 245)");
+
+    // ---- reference docs ----
+    const delta = [
+      "PREPARED_AWAITING_APPROVAL no longer lists a blocked submit chip — submit does not exist yet; the module reads Blocked · No submission action available.",
+      "After approval the submit action appears fresh with a NEW badge (protocol-native unlock), in both acts.",
+      "Lower region gains 6 Act II states; no new region, card, page, or nav is added.",
+      "Requirements collapse to a compact “authorization basis” strip after submission to free vertical room.",
+      "Context band scheduled date is now a real fixture (Sep 18) and turns amber during the coverage-gap states.",
+      "Payer result is non-terminal: Approved + window mismatch, never a triumphant “care unblocked.”",
+      "New capability is external-state-driven: it appears only after the payer event, proving a living capability surface.",
+      "Final state is administrative alignment (Ready / Covered), explicitly not a clinical determination.",
+    ];
+    const H = { yes: { human: "Human required", humanBg: "oklch(0.96 0.04 245)", humanColor: "oklch(0.42 0.1 245)" }, no: { human: "No human", humanBg: "oklch(0.95 0.008 240)", humanColor: "oklch(0.5 0.02 245)" } };
+    const grammar = [
+      { code: "08", name: "Payer approved · window mismatch", trigger: "Backend payer event arrives", cap: "no change yet · monitor only", region: "Payer decision Approved + coverage “does not cover scheduled date”", ...H.no },
+      { code: "09", name: "Remediation available", trigger: "WellAuth evaluates result vs scheduled care", cap: "+ Resolve authorization window (NEW)", region: "Gap panel + “action ready” note", ...H.no },
+      { code: "10", name: "Remediation prepared", trigger: "Assistant invokes resolve action", cap: "no submit yet · assistant blocked", region: "Proposed remediation review + Approve extension request", ...H.yes },
+      { code: "11", name: "Remediation approved", trigger: "Human approves exact extension", cap: "+ Submit extension (NEW)", region: "Extension approved for submission", ...H.yes },
+      { code: "12", name: "Remediation submitted", trigger: "Assistant invokes submit extension", cap: "− Submit extension · monitor", region: "Submitted · pending with progress sweep", ...H.no },
+      { code: "13", name: "Authorization aligned", trigger: "Second backend payer event", cap: "monitor (terminal)", region: "Authorization updated · MRI covered · Ready", ...H.no },
+    ];
+    const motion = [
+      { act: "I·1", name: "Requirements discovered", behavior: "5 rows populate top-down; readiness bar 0→0/5; unlock toast.", timing: "0.5s ease · 70ms stagger" },
+      { act: "I·2", name: "Evidence assembly", behavior: "Rows flip UNMET→MET one at a time; provenance fades in. Never all five at once.", timing: "0.4s per row" },
+      { act: "I·3", name: "Fifth requirement", behavior: "OPEN(red)→MET(green); bar 4/5→5/5; Prepare toast.", timing: "colour 0.5s · bar 0.6s" },
+      { act: "I·4", name: "Prepare", behavior: "Lower region rises into review surface; no modal.", timing: "0.45s ease-out" },
+      { act: "I·5", name: "Human approval", behavior: "Filled control commits; region resolves; Submit toast + NEW badge.", timing: "0.45s · toast 3.2s" },
+      { act: "I·6", name: "Submission", behavior: "Approval control removed; pending sweep; submit leaves module.", timing: "sweep 1.4s loop" },
+      { act: "II·7", name: "Payer approval", behavior: "Payer decision appears first (Approved) — deliberate short beat before the gap.", timing: "0.45s rise" },
+      { act: "II·8", name: "Mismatch reveal", behavior: "Coverage line resolves to amber “does not cover scheduled date”; scheduled date in band turns amber. Paced so the contradiction is legible.", timing: "0.5s, +300ms after decision" },
+      { act: "II·9", name: "Remediation unlock", behavior: "New assistant action pops in with NEW badge; toast held long enough to film.", timing: "chip 0.45s · toast 3.2s" },
+      { act: "II·10", name: "Remediation review", behavior: "Lower region transforms to bounded extension review.", timing: "0.45s ease-out" },
+      { act: "II·11", name: "Final resolution", behavior: "Scheduled date + authorization visibly align; calm terminal, no celebratory motion.", timing: "0.45s rise" },
+    ];
+    const copy = [
+      { label: "Status label ⚑", val: "“Authorization window mismatch” — INTERIM, pending domain review (avoid “coverage gap”: pharmacy/Medicare overload). Alts: date mismatch · service date outside authorization · dates require action." },
+      { label: "Mismatch — long copy", val: "“Does not cover scheduled date” (keep — extremely clear)" },
+      { label: "Payer result", val: "Payer decision · Approved (never “denied”)" },
+      { label: "Remediation action", val: "Resolve authorization window" },
+      { label: "Remediation review", val: "Proposed remediation — authorization window" },
+      { label: "Requested change", val: "Extend validity through [date]" },
+      { label: "Human approval", val: "Approve extension request" },
+      { label: "Submit capability", val: "Submit extension" },
+      { label: "Final readiness", val: "Administrative readiness · Ready" },
+      { label: "Final coverage", val: "Scheduled MRI · Covered by authorization" },
+      { label: "Safety note", val: "“Administrative alignment only — not a clinical determination.”" },
+    ];
+    const tokens = [
+      { name: "--canvas", val: "oklch(0.985 0.005 240)", swatch: "oklch(0.985 0.005 240)" },
+      { name: "--ink", val: "oklch(0.24 0.02 250)", swatch: "oklch(0.24 0.02 250)" },
+      { name: "--muted", val: "oklch(0.55 0.02 245)", swatch: "oklch(0.55 0.02 245)" },
+      { name: "--hairline", val: "oklch(0.88 0.012 240)", swatch: "oklch(0.88 0.012 240)" },
+      { name: "--accent", val: "oklch(0.5 0.1 245)", swatch: "oklch(0.5 0.1 245)" },
+      { name: "--met", val: "oklch(0.5 0.1 155)", swatch: "oklch(0.5 0.1 155)" },
+      { name: "--pending", val: "oklch(0.6 0.1 70)", swatch: "oklch(0.6 0.1 70)" },
+      { name: "--warn (gap)", val: "oklch(0.5 0.13 50)", swatch: "oklch(0.5 0.13 50)" },
+      { name: "--open", val: "oklch(0.55 0.13 30)", swatch: "oklch(0.55 0.13 30)" },
+      { name: "radius", val: "6px rows/controls · 8px shell", swatch: "oklch(0.94 0.005 240)" },
+      { name: "font-ui", val: "IBM Plex Sans 400/500/600", swatch: "oklch(0.24 0.02 250)" },
+      { name: "font-mono", val: "IBM Plex Mono 400/500/600", swatch: "oklch(0.45 0.02 250)" },
+    ];
+    const a11y = [
+      { area: "Colour", note: "Status never encoded by colour alone — every pill/row pairs colour with a text label (MET/OPEN/Approved) and a shape token." },
+      { area: "Contrast", note: "Ink on canvas ≈ 12:1; mono metadata ≥ 4.5:1; the one filled accent button ≥ 4.5:1 white-on-accent." },
+      { area: "Focus", note: "All demo-nav and approval controls are real buttons; keyboard-reachable, arrow-key state stepping, visible focus ring required." },
+      { area: "Text size", note: "Body ≥ 12px, mono labels ≥ 9px only for non-essential metadata; core copy 12–17px." },
+      { area: "Motion", note: "All transitions deterministic ≤ 0.6s; honour prefers-reduced-motion by disabling the pending sweep and toast slide." },
+    ];
+    const handoff = [
+      { area: "State model", note: "One enum of 13 lifecycle states + 1 refusal branch drives every region; no per-screen layouts." },
+      { area: "Capability gating", note: "Assistant actions render from a per-state allow-list; submit/resolve/extension tools are absent (not disabled) until their state." },
+      { area: "Authority", note: "Two human approvals, identical grammar; approval binds to a packet revision and NEVER transmits — a separate agent action does." },
+      { area: "External events", note: "Two backend payer events (approve+gap, updated) transition state; the second unlocks a capability that did not exist before." },
+      { area: "Regions", note: "Context band + Assistant/Activity persist; only the lower region and requirements density change." },
+      { area: "Fixtures", note: "Sep 18 scheduled · Sep 12 first validity · Oct 3 extension · #NS-40192 / ·EXT. Centralise as one fixture object." },
+    ];
+
+    return {
+      stateCode: CODES[step], beatNum, beatTotal, beatName, beatAct, beatActColor, prev: this.prev, next: this.next, advance: this.next,
+      schedColor, pillLabel: PILL.l, pillBg: pill.bg, pillColor: pill.color, pillBorder: pill.border,
+      reqHeading, reqRows, reqsHidden, compactReqs, showFullRows,
+      showReadinessBar, readinessLabel, readinessPct, readinessColor,
+      assistVerb: A.verb, verbBg: VERB.bg, verbColor: VERB.color, assistActions, hasActions, hasBlocked, blockedNote: A.blocked || "",
+      activity,
+      isPre, isReady, isReview, isApproved, isSubmitted, isGap, gapActionReady, isRemReview, isRemApproved, isRemSubmitted, isAligned, isRefusal,
+      preMsg, preColor, reviewItems,
+      toastShown, toastText: TT.text, toastGlyph: TT.glyph, toastBg, toastColor,
+      delta, grammar, motion, copy, tokens, a11y, handoff,
+    };
+  }
+}
+</script>
+</body>
+</html>

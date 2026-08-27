@@ -46,7 +46,7 @@ function codesOf(resource) {
   return codings.map((c) => c.code).filter(Boolean)
 }
 
-function titleOf(resource) {
+export function titleOf(resource) {
   return (
     resource.code?.text ??
     resource.type?.text ??
@@ -60,7 +60,7 @@ function titleOf(resource) {
   )
 }
 
-function effectiveOf(resource) {
+export function effectiveOf(resource) {
   return (
     resource.effectiveDateTime ??
     resource.recordedDate ??
@@ -160,6 +160,28 @@ export async function getOrder(workflowId) {
     sourceVersionId: sr.meta?.versionId ?? null,
     sourceLastUpdated: sr.meta?.lastUpdated ?? null,
     etag: order.etag ?? null,
+  }
+}
+
+/**
+ * C-1 -- bounded patient identity for the workspace context band.
+ *
+ * Deliberately minimal: a display name and a synthetic-data label, nothing
+ * more. No DOB, MRN, gender or address -- the context band needs none of them,
+ * and minimum-necessary applies to the UI just as it does to the payer packet.
+ * Without this the page can only fabricate a patient name, which it previously
+ * did.
+ */
+export async function getPatient(workflowId) {
+  const wf = workflow(workflowId)
+  const { resource } = await fhir.read('Patient', wf.patientId)
+  const name = resource.name?.[0]
+  const display =
+    name?.text || [name?.given?.join(' '), name?.family].filter(Boolean).join(' ')
+  return {
+    display: display || null,
+    // All hackathon clinical data is synthetic; the band says so out loud.
+    syntheticLabel: 'Synthetic record',
   }
 }
 

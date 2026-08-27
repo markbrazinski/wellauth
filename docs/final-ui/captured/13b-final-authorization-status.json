@@ -1,0 +1,22 @@
+{
+  "workflowId": "wf-wellauth-001",
+  "workflowState": "APPROVED",
+  "submissionState": "COMPLETE",
+  "payerStatus": "approved",
+  "payerReference": "NS-40192",
+  "receiptId": "NS-RCPT-2e8f5e8f-ec12-4a15-8279-1614da7bbf75",
+  "disposition": "Prior authorization approved by simulated payer",
+  "authorizationPeriod": {
+    "start": "2026-08-26",
+    "end": "2026-09-12"
+  },
+  "effectiveAt": "2026-08-27T01:31:32.883Z",
+  "claimIdentifier": "WA-wf-wellauth-001-e80e62bf8aad42a415321a31",
+  "attempts": 1,
+  "additionalInformationRequired": false,
+  "requiresReconciliation": false,
+  "payer": "Northstar Health Plan",
+  "simulated": true,
+  "simulationNotice": "Destination is a simulated payer. No real payer was contacted.",
+  "correlationId": "c3efceff-5105-4bdf-b8d4-99b83afb9d29"
+}

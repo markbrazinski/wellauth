@@ -1,0 +1,38 @@
+{
+  "workflowId": "wf-wellauth-001",
+  "revision": 13,
+  "phase": "REMEDIATION_APPROVED",
+  "alignment": {
+    "evaluated": true,
+    "aligned": false,
+    "scheduledServiceDate": "2026-09-18",
+    "validThrough": "2026-09-12"
+  },
+  "remediation": {
+    "type": "WellAuthAuthorizationWindowRemediation/1",
+    "state": "REMEDIATION_APPROVED",
+    "payer": "Northstar Health Plan",
+    "payerAuthorizationReference": "NS-40192",
+    "currentValidThrough": "2026-09-12",
+    "scheduledServiceDate": "2026-09-18",
+    "requestedValidThrough": "2026-10-03",
+    "reasonCode": "scheduled-service-outside-authorization-window",
+    "reasonDisplay": "Scheduled service falls outside the current authorization validity window.",
+    "clinicalIntentChanged": false,
+    "evidenceChanged": false,
+    "orderChanged": false,
+    "revision": 11,
+    "hash": "sha256:0c2899fe6e6ba0f169f7d7e4154f79d7430bb7e81dda2799b3d3d8569fdac51a",
+    "preparedAt": "2026-08-27T01:31:51.383Z",
+    "approval": {
+      "approvedBy": "A. Reyes",
+      "role": "prior-auth-coordinator",
+      "at": "2026-08-27T01:31:52.714Z",
+      "remediationHash": "sha256:0c2899fe6e6ba0f169f7d7e4154f79d7430bb7e81dda2799b3d3d8569fdac51a",
+      "outcome": "APPROVED"
+    },
+    "submission": null,
+    "simulated": true
+  },
+  "correlationId": "97124d23-6fd1-4a53-ac9b-10d51ef1ca3a"
+}

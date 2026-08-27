@@ -1,0 +1,136 @@
+{
+  "workflowId": "wf-wellauth-001",
+  "state": "REQUIREMENTS_RESOLVED",
+  "revision": 6,
+  "payer": "Northstar Health Plan",
+  "requirementSetVersion": "northstar-cardiac-mri-v1",
+  "completeness": {
+    "satisfied": 4,
+    "required": 5,
+    "complete": false,
+    "missing": [
+      "req-003"
+    ]
+  },
+  "order": {
+    "workflowId": "wf-wellauth-001",
+    "orderHandle": "ev_ae916c6f1cde9e9901ac",
+    "service": {
+      "display": "Cardiac MRI with contrast",
+      "code": "75561",
+      "system": "http://www.ama-assn.org/go/cpt"
+    },
+    "status": "active",
+    "intent": "order",
+    "authoredOn": "2026-08-10T14:05:00Z",
+    "scheduled": "2026-09-18T09:30:00Z",
+    "coverage": {
+      "payer": "Northstar Health Plan",
+      "status": "active",
+      "periodStart": "2026-01-01",
+      "periodEnd": "2026-12-31",
+      "sourceVersionId": "MTc4Nzc4MzU3MDgxNzcxMDAwMA"
+    },
+    "sourceVersionId": "MTc4Nzc4MzU1NTAyNDU4OTAwMA",
+    "sourceLastUpdated": "2026-08-26T22:32:35.024589+00:00",
+    "etag": "W/\"MTc4Nzc4MzU1NTAyNDU4OTAwMA\""
+  },
+  "coverage": {
+    "resourceType": "Coverage",
+    "id": "wellauth-coverage-001",
+    "versionId": "MTc4Nzc4MzU3MDgxNzcxMDAwMA"
+  },
+  "manifestRevision": null,
+  "preparedRevision": null,
+  "packetHash": null,
+  "approval": null,
+  "submission": null,
+  "remediation": null,
+  "bindings": [
+    {
+      "requirementId": "req-001",
+      "evidenceHandle": "ev_0b5a99faaba89bbcfefa",
+      "resourceType": "Condition",
+      "sourceVersionId": "MTc4Nzc4MDA2ODU3ODk3MDAwMA",
+      "bindingRule": "structured-resource-path",
+      "boundAt": "2026-08-27T01:31:02.436Z",
+      "boundAtRevision": 3
+    },
+    {
+      "requirementId": "req-002",
+      "evidenceHandle": "ev_73a7dc99ad69706ed091",
+      "resourceType": "DiagnosticReport",
+      "sourceVersionId": "MTc4Nzc4MzU0MjI1NTE1ODAwMA",
+      "bindingRule": "structured-resource-path",
+      "boundAt": "2026-08-27T01:31:03.881Z",
+      "boundAtRevision": 4
+    },
+    {
+      "requirementId": "req-004",
+      "evidenceHandle": "ev_46359be797d269f7ed63",
+      "resourceType": "PractitionerRole",
+      "sourceVersionId": "MTc4Nzc4MDA2ODIyMDExNDAwMA",
+      "bindingRule": "structured-resource-path",
+      "boundAt": "2026-08-27T01:31:05.509Z",
+      "boundAtRevision": 5
+    },
+    {
+      "requirementId": "req-005",
+      "evidenceHandle": "ev_abfd8b6f933c1355788c",
+      "resourceType": "Coverage",
+      "sourceVersionId": "MTc4Nzc4MzU3MDgxNzcxMDAwMA",
+      "bindingRule": "structured-resource-path",
+      "boundAt": "2026-08-27T01:31:08.522Z",
+      "boundAtRevision": 6
+    }
+  ],
+  "updatedAt": "2026-08-27T01:31:08.522Z",
+  "scheduledServiceDate": "2026-09-18",
+  "scheduledServiceDisplay": "September 18 · 9:30 AM",
+  "requirements": [
+    {
+      "id": "req-001",
+      "label": "Documented cardiac symptoms within the relevant window",
+      "expectedResourceType": "Condition",
+      "alternatePath": false
+    },
+    {
+      "id": "req-002",
+      "label": "Prior echocardiogram result",
+      "expectedResourceType": "DiagnosticReport",
+      "alternatePath": false
+    },
+    {
+      "id": "req-003",
+      "label": "Failed or contraindicated conservative therapy",
+      "expectedResourceType": "DocumentReference",
+      "alternatePath": true
+    },
+    {
+      "id": "req-004",
+      "label": "Ordering physician identity / attestation requirement",
+      "expectedResourceType": "PractitionerRole",
+      "alternatePath": false
+    },
+    {
+      "id": "req-005",
+      "label": "Active payer-member eligibility / coverage requirement",
+      "expectedResourceType": "Coverage",
+      "alternatePath": false
+    }
+  ],
+  "act2": {
+    "phase": null,
+    "alignment": null
+  },
+  "availableTools": [
+    "get_order_context",
+    "discover_coverage_requirements",
+    "find_supporting_evidence",
+    "inspect_evidence",
+    "attach_evidence",
+    "remove_evidence"
+  ],
+  "simulated": true,
+  "correlationId": "4fe3209d-e1c9-44ed-b2cc-f77eccbae855"
+}

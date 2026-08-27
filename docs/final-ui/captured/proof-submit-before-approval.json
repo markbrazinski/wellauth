@@ -1,0 +1,9 @@
+{
+  "httpStatus": 409,
+  "response": {
+    "code": "APPROVAL_REQUIRED",
+    "message": "Submission requires an approved workflow",
+    "retryable": false,
+    "correlationId": "6fff1fb6-3d26-4139-9230-8b4e1045ead2"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "workflowId": "wf-wellauth-001",
+  "requirementId": "req-003",
+  "status": "OK",
+  "alternatePath": true,
+  "candidates": [
+    {
+      "evidenceHandle": "ev_b5f045fd2cc22a1a3779",
+      "resourceType": "DocumentReference",
+      "title": "Cardiology consult note - conservative therapy trial outcome",
+      "code": "11488-4",
+      "effectiveDate": "2026-08-01T09:00:00Z",
+      "status": "current",
+      "source": "wellauth/wellauth-r4",
+      "sourceVersionId": "MTc4Nzc4MDA3MDMzNTg2NjAwMA",
+      "sourceLastUpdated": "2026-08-26T21:34:30.335866+00:00",
+      "matchedBy": {
+        "requirementId": "req-003",
+        "resourceType": "DocumentReference",
+        "policy": "alternate-document-path"
+      }
+    }
+  ],
+  "correlationId": "e07fea80-a66b-4ea0-afcf-6c2007d79db2"
+}

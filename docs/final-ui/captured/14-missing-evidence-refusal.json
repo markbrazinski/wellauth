@@ -1,0 +1,9 @@
+{
+  "httpStatus": 409,
+  "response": {
+    "code": "MISSING_REQUIRED_EVIDENCE",
+    "message": "Requirements without current evidence: req-003",
+    "retryable": false,
+    "correlationId": "31a8e3a2-bfcf-484d-846b-c3f029389583"
+  }
+}

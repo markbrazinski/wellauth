@@ -1,0 +1,9 @@
+{
+  "httpStatus": 400,
+  "response": {
+    "code": "REMEDIATION_APPROVAL_REQUIRED",
+    "message": "Remediation requires explicit workforce approval before submission",
+    "retryable": false,
+    "correlationId": "6486bbd0-7c19-4f2f-a6c0-5d3f5d5ac100"
+  }
+}

@@ -254,9 +254,16 @@ export interface Requirement {
 export interface Binding {
   requirementId: string
   resourceType: string
-  resourceId: string
+  // Stripped from the /snapshot projection by the HTTP layer's stripHandleIds,
+  // so it is genuinely absent on the read the workspace performs.
+  resourceId?: string
   sourceVersionId: string
   bindingRule: string
+  // C-2: presentation metadata carried from the exact attached source version.
+  // Nullable -- a resource may legitimately have no title or clinical date, and
+  // the UI must show that honestly rather than invent one.
+  title: string | null
+  effectiveDate: string | null
   boundAt: string
 }
 
@@ -272,18 +279,33 @@ export interface Snapshot {
     scheduled?: string | null
     coverage?: { payer: string; status: string }
   } | null
+  // C-1: bounded patient identity. Null when FHIR could not be reached -- the
+  // context band then shows the identity as unavailable, never a placeholder name.
+  patient: { display: string | null; syntheticLabel: string } | null
   scheduledServiceDate: string | null
   scheduledServiceDisplay: string
   requirements: Requirement[]
   bindings: Binding[]
   packetHash: string | null
-  approval: { approvedBy: string; role: string; at: string; packetHash: string } | null
+  approval: {
+    approvedBy: string
+    role: string
+    at: string
+    packetHash: string
+    manifestRevision: number
+    workflowRevision: number
+    outcome: string
+  } | null
   submission: {
     state: string
     payerStatus: string | null
     claimIdentifier: string
     destination: string
     attempts: number
+    // The validity window the payer granted, and its reference. Act II's gap
+    // is derived from authorizationPeriod.end vs the scheduled service date.
+    authorizationPeriod: { start: string; end: string } | null
+    payerReference: string | null
     simulated: boolean
   } | null
   act2: {

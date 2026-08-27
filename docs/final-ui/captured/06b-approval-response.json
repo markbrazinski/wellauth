@@ -1,0 +1,16 @@
+{
+  "workflowId": "wf-wellauth-001",
+  "state": "APPROVED",
+  "revision": 9,
+  "approval": {
+    "approvedBy": "A. Reyes",
+    "role": "prior-auth-coordinator",
+    "at": "2026-08-27T01:31:29.492Z",
+    "manifestRevision": 1,
+    "packetHash": "sha256:e80e62bf8aad42a415321a312088ac07285337f6f8cb058b13e9f78fe9644f10",
+    "workflowRevision": 8,
+    "outcome": "APPROVED"
+  },
+  "submitted": false,
+  "correlationId": "83a59819-06b5-40db-b1ca-c2e64bc09402"
+}

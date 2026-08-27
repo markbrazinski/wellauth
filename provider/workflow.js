@@ -20,7 +20,7 @@ import { FieldValue } from '@google-cloud/firestore'
 import * as fhir from './fhir.js'
 import { FhirError } from './fhir.js'
 import { REQUIREMENTS, REQUIREMENTS_BY_ID, WORKFLOWS } from './policy.js'
-import { DomainError, findEvidence } from './service.js'
+import { DomainError, effectiveOf, findEvidence, titleOf } from './service.js'
 import { packetHash } from './canonical.js'
 import {
   bindingRef,
@@ -287,6 +287,8 @@ export async function getWorkflow(workflowId) {
         resourceId: b.resourceId,
         sourceVersionId: b.sourceVersionId,
         bindingRule: b.bindingRule,
+        title: b.title ?? null,
+        effectiveDate: b.effectiveDate ?? null,
         boundAt: b.boundAt,
         boundAtRevision: b.boundAtRevision,
       })),
@@ -489,6 +491,13 @@ export async function attachEvidence(workflowId, { requirementId, evidenceHandle
       resourceId: handle.resourceId,
       sourceVersionId: versionId,
       bindingRule: req.alternatePath ? 'alternate-document-path' : 'structured-resource-path',
+      // C-2: presentation metadata for the provenance line, derived from the
+      // exact resource version this binding freezes -- so the title and date
+      // shown can never describe a different version than the one attached.
+      // Costs no extra FHIR read: `resource` was already fetched above for the
+      // version-aware policy re-check.
+      title: titleOf(resource),
+      effectiveDate: effectiveOf(resource),
       boundAt: nowIso(),
       boundAtRevision: revision,
     })

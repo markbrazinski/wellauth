@@ -1,0 +1,41 @@
+{
+  "workflowId": "wf-wellauth-001",
+  "requirementId": "req-001",
+  "status": "OK",
+  "alternatePath": false,
+  "candidates": [
+    {
+      "evidenceHandle": "ev_0b5a99faaba89bbcfefa",
+      "resourceType": "Condition",
+      "title": "Dyspnea on exertion",
+      "code": "267036007",
+      "effectiveDate": "2026-07-22",
+      "status": "active",
+      "source": "wellauth/wellauth-r4",
+      "sourceVersionId": "MTc4Nzc4MDA2ODU3ODk3MDAwMA",
+      "sourceLastUpdated": "2026-08-26T21:34:28.578970+00:00",
+      "matchedBy": {
+        "requirementId": "req-001",
+        "resourceType": "Condition",
+        "policy": "structured-resource-path"
+      }
+    },
+    {
+      "evidenceHandle": "ev_2e97a2175978ccfc7b43",
+      "resourceType": "Condition",
+      "title": "Exertional chest pain",
+      "code": "29857009",
+      "effectiveDate": "2026-07-20",
+      "status": "active",
+      "source": "wellauth/wellauth-r4",
+      "sourceVersionId": "MTc4Nzc4MDA2ODQwNjIyNjAwMA",
+      "sourceLastUpdated": "2026-08-26T21:34:28.406226+00:00",
+      "matchedBy": {
+        "requirementId": "req-001",
+        "resourceType": "Condition",
+        "policy": "structured-resource-path"
+      }
+    }
+  ],
+  "correlationId": "6fd3ad3f-5451-449a-9205-c1e455f91f4f"
+}

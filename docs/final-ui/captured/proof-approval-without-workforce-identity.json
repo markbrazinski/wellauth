@@ -1,0 +1,8 @@
+{
+  "httpStatus": 401,
+  "response": {
+    "code": "APPROVER_IDENTITY_REQUIRED",
+    "message": "Approval requires an authenticated workforce user",
+    "correlationId": "76841733-ab50-4a02-947b-214843db7b91"
+  }
+}
