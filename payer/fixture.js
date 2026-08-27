@@ -33,6 +33,16 @@ export const VALID_FROM = '2026-08-26'
  */
 export const CANONICAL_WORKFLOW_ID = 'wf-wellauth-001'
 
+/**
+ * Per-judge demo sessions get their own workflow id (P0-1) but are the SAME
+ * canonical demo, bound to the same synthetic patient, order and coverage.
+ * They therefore keep the pinned authorization reference -- otherwise every
+ * judge would see a different reference for the one canonical case.
+ *
+ * Must stay in sync with provider/policy.js SESSION_PREFIX.
+ */
+export const CANONICAL_SESSION_PREFIX = 'wf-wellauth-s-'
+
 export const REMEDIATION_REASON_CODE = 'scheduled-service-outside-authorization-window'
 export const REMEDIATION_REASON_DISPLAY =
   'Scheduled service falls outside the current authorization validity window.'

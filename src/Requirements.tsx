@@ -14,6 +14,55 @@ function statusOf(b: Binding | undefined): 'met' | 'unmet' {
   return b ? 'met' : 'unmet'
 }
 
+/**
+ * P1-3: human-facing source label.
+ *
+ * The operational reading is "where did this come from", not "which FHIR
+ * resource type is it". The resource type is still available on the binding
+ * for anyone who needs it (and stays in the title attribute), but the primary
+ * line reads like prior-auth operations software rather than a FHIR debugger.
+ */
+const SOURCE_LABEL: Record<string, string> = {
+  Condition: 'Problem list',
+  DiagnosticReport: 'Diagnostic report',
+  DocumentReference: 'Clinical note',
+  PractitionerRole: 'Provider credential',
+  Coverage: 'Member coverage',
+  Observation: 'Observation',
+}
+
+const sourceLabel = (resourceType: string) => SOURCE_LABEL[resourceType] ?? resourceType
+
+/**
+ * P2-1: display casing for titles that arrive lower-cased from the source
+ * (e.g. Coverage's "preferred provider organization policy").
+ *
+ * Presentation only -- the source string is never mutated. Applied only to an
+ * all-lowercase title, so a title the record already cased deliberately (an
+ * acronym, a proper noun) is left exactly as authored.
+ */
+function displayTitle(title: string | null): string | null {
+  if (!title) return title
+  if (title !== title.toLowerCase()) return title
+  return title.replace(/\b[a-z]/g, (c) => c.toUpperCase())
+}
+
+/**
+ * P1-3: how to phrase the date, given what kind of date it is. A coverage or
+ * credentialing period start is not a clinical event date and is never shown
+ * as a bare date next to a title.
+ */
+function dateLabel(b: Binding, fmtDate: (iso?: string | null) => string): string {
+  if (!b.effectiveDate) return ''
+  if (b.dateKind !== 'coverage-period') return fmtDate(b.effectiveDate)
+  // An administrative window start ALWAYS carries its year: "effective from
+  // Jan 1" is ambiguous in a way "effective from Jan 1, 2026" is not, and this
+  // is precisely the presentation the audit flagged.
+  const year = String(b.effectiveDate).slice(0, 4)
+  const shown = fmtDate(b.effectiveDate)
+  return `effective from ${shown.includes(year) ? shown : `${shown}, ${year}`}`
+}
+
 export function Requirements({
   snap,
   fmtDate,
@@ -109,16 +158,44 @@ export function Requirements({
                   <div className="req-label">{r.label}</div>
 
                   {b ? (
-                    // Provenance: what was attached, when it was authored, where
-                    // it came from, and who attached it.
-                    <div className="provenance">
-                      ↳ {b.title ?? b.resourceType}
-                      {b.effectiveDate ? ` · ${fmtDate(b.effectiveDate)}` : ''} ·{' '}
-                      {b.resourceType}
+                    // Provenance: what was attached, when, where it came from,
+                    // and who attached it. Human-facing labels (P1-3); the
+                    // exact resource type and version stay in the tooltip.
+                    <div
+                      className="provenance"
+                      title={`${b.resourceType} · version ${b.sourceVersionId}`}
+                    >
+                      ↳ {displayTitle(b.title) ?? sourceLabel(b.resourceType)}
+                      {dateLabel(b, fmtDate) ? ` · ${dateLabel(b, fmtDate)}` : ''} ·{' '}
+                      {sourceLabel(b.resourceType)}
                       <span className="by"> · attached by assistant</span>
                     </div>
                   ) : (
                     <div className="req-note">awaiting supporting evidence</div>
+                  )}
+
+                  {/* P1-1: THE FIFTH BEAT, made legible.
+                      Why this requirement is legitimately satisfied a
+                      different way -- rendered only from authoritative truth
+                      (requirement.alternatePath + binding.bindingRule), never
+                      from invented clinical reasoning. */}
+                  {r.alternatePath && (
+                    <div
+                      className={`alt-path${b ? ' resolved' : ''}`}
+                      data-testid={`alt-path-${r.id}`}
+                    >
+                      <span className="alt-path-tag">
+                        {b ? 'Found elsewhere in the record' : 'No structured match'}
+                      </span>
+                      <span className="alt-path-text">
+                        {b
+                          ? 'This requirement has no matching structured record. The ' +
+                            'assistant located existing authoritative evidence in the ' +
+                            'clinical notes instead.'
+                          : 'This requirement cannot be satisfied from the structured ' +
+                            'record and needs evidence located elsewhere.'}
+                      </span>
+                    </div>
                   )}
                 </div>
 

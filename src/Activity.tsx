@@ -70,11 +70,19 @@ export function buildActivity(snap: Snapshot): Event[] {
       who: 'Assistant',
       kind: 'assistant',
       what: `Submitted authorization to ${snap.payer} (simulated)`,
+      // P2-2: durable submission start, never a render-time clock.
+      at: snap.submission.startedAt ?? null,
     })
     if (snap.submission.payerStatus === 'approved') {
-      out.push({ who: 'Simulated payer', kind: 'payer', what: 'Returned Approved' })
+      out.push({
+        who: 'Simulated payer', kind: 'payer', what: 'Returned Approved',
+        at: snap.submission.receivedAt ?? snap.submission.completedAt ?? null,
+      })
     } else if (snap.submission.payerStatus === 'denied') {
-      out.push({ who: 'Simulated payer', kind: 'payer', what: 'Returned Denied' })
+      out.push({
+        who: 'Simulated payer', kind: 'payer', what: 'Returned Denied',
+        at: snap.submission.receivedAt ?? snap.submission.completedAt ?? null,
+      })
     }
   }
 
@@ -90,6 +98,7 @@ export function buildActivity(snap: Snapshot): Event[] {
       who: 'Assistant',
       kind: 'assistant',
       what: 'Prepared authorization-window remediation',
+      at: rem.preparedAt ?? null,
     })
     if (rem.approval) {
       out.push({
@@ -104,11 +113,15 @@ export function buildActivity(snap: Snapshot): Event[] {
         who: 'Assistant',
         kind: 'assistant',
         what: `Submitted extension to ${snap.payer} (simulated)`,
+        at: rem.submission.startedAt ?? null,
       })
     }
   }
   if (phase === 'AUTHORIZATION_ALIGNED' && rem) {
-    out.push({ who: 'Simulated payer', kind: 'payer', what: 'Updated authorization validity' })
+    out.push({
+      who: 'Simulated payer', kind: 'payer', what: 'Updated authorization validity',
+      at: rem.submission?.completedAt ?? null,
+    })
   }
 
   return out
@@ -128,21 +141,38 @@ const WHO_CLASS: Record<Actor, string> = {
   system: 'who-system',
 }
 
+/**
+ * P2-4: how many newest events stay at full emphasis. Everything older is
+ * de-emphasised but NEVER removed -- full auditability is preserved, the
+ * timeline scrolls, and no state is truncated or summarised away.
+ */
+const CURRENT_EVENTS = 3
+
 export function Activity({ events }: { events: Event[] }) {
   // Newest first: the beat that just happened is the one being filmed.
   const ordered = [...events].reverse()
 
   return (
     <div className="activity-wrap" aria-label="Activity">
-      <div className="section-title" style={{ marginBottom: 12 }}>
-        Activity
+      <div className="activity-head">
+        <span className="section-title">Activity</span>
+        {ordered.length > 0 && (
+          <span className="activity-count" data-testid="activity-count">
+            {ordered.length} event{ordered.length === 1 ? '' : 's'}
+          </span>
+        )}
       </div>
       {ordered.length === 0 ? (
         <p className="activity-empty">No activity yet.</p>
       ) : (
         <ol className="activity" data-testid="activity">
           {ordered.map((e, i) => (
-            <li key={`${e.who}-${e.what}-${i}`}>
+            <li
+              key={`${e.who}-${e.what}-${i}`}
+              // Hierarchy, not truncation: older entries fade back so the
+              // current state reads first. Every event stays present.
+              className={i < CURRENT_EVENTS ? 'current' : 'historical'}
+            >
               <span className="dot" style={{ background: DOT[e.kind] }} aria-hidden="true" />
               <div className="body">
                 <div className="text">

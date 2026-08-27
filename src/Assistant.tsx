@@ -95,7 +95,10 @@ export function Assistant({
         </span>
       </div>
 
-      <div className="eyebrow">Available actions</div>
+      {/* P1-2 / P1-4: name the owner of these actions explicitly. They belong
+          to the external assistant; the workforce user's own actions are the
+          filled buttons in the review region below, and nowhere else. */}
+      <div className="eyebrow">Available to the assistant</div>
 
       {snap.availableTools.length > 0 && (
         <div className="actions" data-testid="cap-list">
@@ -112,6 +115,13 @@ export function Assistant({
       )}
 
       {blocked && <div className="blocked-note">{blocked}</div>}
+
+      {/* P1-4: the boundary, stated once, in the assistant's own panel. This is
+          the product thesis in one line -- capabilities are granted by
+          workflow state, not chosen by the model. */}
+      <div className="cap-note">
+        Granted by workflow state · not chosen by the assistant
+      </div>
     </div>
   )
 }

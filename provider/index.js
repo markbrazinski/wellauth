@@ -167,8 +167,12 @@ const ROUTES = [
   // check_authorization_status -- bounded: the ONLY input is the workflow id.
   // There is deliberately no parameter for a Claim id or payer reference, so a
   // caller cannot ask this route about someone else's submission.
+  // The scheduled service date is CLINICAL truth read from FHIR, never
+  // caller-supplied, so coverage is computed against the real ordered date.
   [/^\/workflows\/([^/]+)\/authorization-status$/,
-    (m) => submission.checkAuthorizationStatus(m[1])],
+    async (m) => submission.checkAuthorizationStatus(m[1], {
+      scheduledServiceDate: await scheduledDateFor(m[1]).catch(() => null),
+    })],
 ]
 
 /**

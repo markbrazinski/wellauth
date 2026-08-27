@@ -21,12 +21,35 @@ interface Props {
   onApproveRemediation: () => void
 }
 
-/** Short human reason from the frozen manifest's inclusionReason. */
-function reasonOf(inclusionReason: string): string {
-  // "satisfies:req-003:alternate-document-path" -> "alternate document path"
-  const rule = inclusionReason.split(':').pop() ?? inclusionReason
-  return rule.replace(/-/g, ' ')
+/**
+ * P1-3: human-facing reason from the frozen manifest's inclusionReason.
+ *
+ * The manifest stores the deterministic match rule; the review surface is read
+ * by a prior-auth coordinator, so the rule is phrased operationally rather
+ * than as an implementation identifier. Unknown rules fall back to the raw
+ * value rather than being hidden -- the disclosure must stay complete.
+ */
+const REASON_TEXT: Record<string, string> = {
+  'structured-resource-path': 'matched the structured record',
+  'alternate-document-path': 'located in the clinical notes',
 }
+
+function reasonOf(inclusionReason: string): string {
+  const rule = inclusionReason.split(':').pop() ?? inclusionReason
+  return REASON_TEXT[rule] ?? rule.replace(/-/g, ' ')
+}
+
+/** P1-3: same human source vocabulary the requirements list uses. */
+const SOURCE_LABEL: Record<string, string> = {
+  Condition: 'Problem list',
+  DiagnosticReport: 'Diagnostic report',
+  DocumentReference: 'Clinical note',
+  PractitionerRole: 'Provider credential',
+  Coverage: 'Member coverage',
+  Observation: 'Observation',
+}
+
+const sourceLabel = (resourceType: string) => SOURCE_LABEL[resourceType] ?? resourceType
 
 export function LowerRegion(p: Props) {
   const { snap } = p
@@ -119,7 +142,9 @@ function DisclosureReview({ snap, disclosure, busy, onApproveSubmission }: Props
                   <span className="marker" aria-hidden="true" />
                   <div>
                     <span className="name">{labelFor(i.requirementId)}</span>
-                    <span className="reason"> — {i.resourceType} · {reasonOf(i.inclusionReason)}</span>
+                    <span className="reason" title={`${i.resourceType} · version ${i.sourceVersionId}`}>
+                      {' '}— {sourceLabel(i.resourceType)} · {reasonOf(i.inclusionReason)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -503,9 +528,9 @@ function Aligned({ snap, fmtDate }: Props) {
             <div className="final-ref">
               #{r?.payerAuthorizationReference ?? '—'} · EXT
             </div>
-            {/* Validity comes from remediation.currentValidThrough. The
-                authorization-status route still reports the ORIGINAL receipt
-                window, so reading it here would show a stale date (Gap C-4). */}
+            {/* Validity comes from remediation.currentValidThrough -- the
+                same durable field check_authorization_status now reports as
+                the EFFECTIVE window, so the page and the tool agree (P0-2). */}
             <div className="final-validity">
               Valid through {fmtDate(r?.currentValidThrough)} · covers{' '}
               {fmtDate(r?.scheduledServiceDate)} MRI

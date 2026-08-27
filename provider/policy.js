@@ -7,6 +7,24 @@
 // into a search parameter.
 
 /** Workflow -> the clinical context it is permanently bound to. */
+/**
+ * Per-judge session prefix (P0-1).
+ *
+ * Every judge/demo session gets its own workflow id so two judges never share
+ * workflow state. All of them are bound to the SAME synthetic clinical context
+ * -- there is exactly one canonical patient, order and coverage -- so the id
+ * partitions WORKFLOW state only. It never selects a patient: the clinical
+ * binding below is server policy, and a caller-supplied id can never widen it.
+ */
+export const SESSION_PREFIX = 'wf-wellauth-s-'
+
+/** ids are opaque and bounded; nothing here reaches a FHIR search parameter. */
+const SESSION_ID = new RegExp(`^${SESSION_PREFIX}[A-Za-z0-9_-]{1,32}$`)
+
+export function isSessionWorkflowId(workflowId) {
+  return SESSION_ID.test(String(workflowId ?? ''))
+}
+
 export const WORKFLOWS = {
   'wf-wellauth-001': {
     workflowId: 'wf-wellauth-001',
@@ -94,3 +112,22 @@ export const REQUIREMENTS = [
 ]
 
 export const REQUIREMENTS_BY_ID = Object.fromEntries(REQUIREMENTS.map((r) => [r.id, r]))
+
+/**
+ * Resolves ANY workflow id to its bound clinical context.
+ *
+ * A per-session id resolves to the one canonical context. This is deliberately
+ * a lookup, not a merge: the returned policy still owns patient, order,
+ * coverage, date windows and code filters, so a session id changes WHICH
+ * workflow document is written, never WHAT clinical data is reachable.
+ */
+export function contextFor(workflowId) {
+  const exact = WORKFLOWS[workflowId]
+  if (exact) return exact
+  if (isSessionWorkflowId(workflowId)) {
+    return { ...WORKFLOWS[CANONICAL_CONTEXT_ID], workflowId }
+  }
+  return undefined
+}
+
+export const CANONICAL_CONTEXT_ID = 'wf-wellauth-001'

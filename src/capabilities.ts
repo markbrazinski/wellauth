@@ -11,8 +11,56 @@
 export const API_BASE =
   (import.meta as { env?: Record<string, string> }).env?.VITE_API_BASE ?? ''
 
-export const WORKFLOW_ID =
-  (import.meta as { env?: Record<string, string> }).env?.VITE_WORKFLOW_ID ?? 'wf-wellauth-001'
+/**
+ * JUDGE SESSION IDENTITY (P0-1).
+ *
+ * Every judge/demo session gets its own workflow id, so one judge can never
+ * open WellAuth onto another judge's approved, submitted or aligned workflow.
+ *
+ *   new tab / new judge  -> no sessionStorage entry -> new id -> CONTEXT_READY
+ *   reload during a run  -> sessionStorage survives  -> same id -> state kept
+ *   new window / browser -> fresh sessionStorage     -> new id -> CONTEXT_READY
+ *
+ * sessionStorage is the right store precisely because it is per-tab and
+ * survives reload but not a new tab -- which is exactly the distinction the
+ * server cannot make from an HTTP request alone.
+ *
+ * This is NOT a frontend state machine. The browser contributes an OPAQUE
+ * IDENTITY and nothing else: it cannot name a state, a patient, a payer or a
+ * transition. The server binds that id to the one canonical clinical context
+ * (provider/policy.js contextFor) and remains the sole authority on what state
+ * the workflow is in. A forged or unknown id is refused, not honoured.
+ *
+ * VITE_WORKFLOW_ID pins a fixed id for automated suites, which need a stable,
+ * resettable target rather than a per-tab one.
+ */
+const SESSION_KEY = 'wellauth.session.workflow'
+const SESSION_PREFIX = 'wf-wellauth-s-'
+
+function newSessionId(): string {
+  const rand =
+    (crypto as { randomUUID?: () => string }).randomUUID?.().replace(/-/g, '').slice(0, 20) ??
+    `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+  return `${SESSION_PREFIX}${rand}`
+}
+
+function resolveWorkflowId(): string {
+  const pinned = (import.meta as { env?: Record<string, string> }).env?.VITE_WORKFLOW_ID
+  if (pinned) return pinned
+  try {
+    const existing = sessionStorage.getItem(SESSION_KEY)
+    if (existing && existing.startsWith(SESSION_PREFIX)) return existing
+    const fresh = newSessionId()
+    sessionStorage.setItem(SESSION_KEY, fresh)
+    return fresh
+  } catch {
+    // Private mode / storage disabled: still isolate this page load rather
+    // than silently falling back onto a shared workflow another judge holds.
+    return newSessionId()
+  }
+}
+
+export const WORKFLOW_ID = resolveWorkflowId()
 
 const wf = (path = '') => `${API_BASE}/workflows/${WORKFLOW_ID}${path}`
 
@@ -264,6 +312,10 @@ export interface Binding {
   // the UI must show that honestly rather than invent one.
   title: string | null
   effectiveDate: string | null
+  // P1-3: what `effectiveDate` actually is. 'clinical' is a real clinical
+  // event date; 'coverage-period' is an administrative window start and must
+  // be labelled as such rather than shown as a bare date.
+  dateKind: 'clinical' | 'coverage-period' | 'authored' | null
   boundAt: string
 }
 
@@ -306,6 +358,10 @@ export interface Snapshot {
     // is derived from authorizationPeriod.end vs the scheduled service date.
     authorizationPeriod: { start: string; end: string } | null
     payerReference: string | null
+    // P2-2: durable event times from the submission record.
+    startedAt?: string | null
+    completedAt?: string | null
+    receivedAt?: string | null
     simulated: boolean
   } | null
   act2: {
@@ -321,7 +377,13 @@ export interface Snapshot {
     reasonDisplay: string
     hash: string
     approval: { approvedBy: string; role: string; at: string } | null
-    submission: { extensionReceiptId: string | null; outcome: string | null } | null
+    submission: {
+      extensionReceiptId: string | null
+      outcome: string | null
+      startedAt?: string | null
+      completedAt?: string | null
+    } | null
+    preparedAt?: string | null
   } | null
   availableTools: string[]
 }

@@ -9,7 +9,7 @@
 import { createHash } from 'node:crypto'
 import * as fhir from './fhir.js'
 import { FhirError } from './fhir.js'
-import { REQUIREMENTS, REQUIREMENTS_BY_ID, WORKFLOWS } from './policy.js'
+import { REQUIREMENTS, REQUIREMENTS_BY_ID, contextFor } from './policy.js'
 
 /** Bounded, machine-readable failure. Never carries FHIR payloads or stacks. */
 export class DomainError extends Error {
@@ -21,7 +21,7 @@ export class DomainError extends Error {
 }
 
 function workflow(workflowId) {
-  const wf = WORKFLOWS[workflowId]
+  const wf = contextFor(workflowId)
   if (!wf) throw new DomainError('WORKFLOW_NOT_FOUND', 'Unknown workflow')
   return wf
 }
@@ -69,6 +69,27 @@ export function effectiveOf(resource) {
     resource.authoredOn ??
     null
   )
+}
+
+/**
+ * What KIND of date effectiveOf returned (P1-3).
+ *
+ * Not every evidence resource carries a clinical date. A Coverage's
+ * `period.start` is the start of an administrative benefit window, and a
+ * PractitionerRole's is the start of a credentialing period -- neither is
+ * "when this clinical event happened". Rendering them bare produced the
+ * audit's ambiguous "Jan 1": a 2020 credentialing date shown exactly like a
+ * clinical study date.
+ *
+ * The honest fix is to label the date rather than hide or fabricate one, so
+ * the UI can say "effective from" instead of implying a clinical event date.
+ * Returns null when there is no date at all.
+ */
+export function dateKindOf(resource) {
+  if (resource.effectiveDateTime ?? resource.recordedDate ?? resource.date) return 'clinical'
+  if (resource.period?.start) return 'coverage-period'
+  if (resource.authoredOn) return 'authored'
+  return null
 }
 
 function subjectRefOf(resource) {

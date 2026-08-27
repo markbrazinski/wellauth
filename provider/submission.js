@@ -22,7 +22,7 @@
 import { randomUUID } from 'node:crypto'
 import { GoogleAuth } from 'google-auth-library'
 import { DomainError } from './service.js'
-import { REQUIREMENTS_BY_ID, WORKFLOWS } from './policy.js'
+import { REQUIREMENTS_BY_ID, contextFor } from './policy.js'
 import { compilePasBundle, readFrozenSources, claimIdentifier } from './pas.js'
 import {
   bindingsCol,
@@ -53,7 +53,7 @@ const PAYER_TIMEOUT_MS = Number(process.env.PAYER_TIMEOUT_MS ?? 30_000)
 const nowIso = () => new Date().toISOString()
 
 function policyFor(workflowId) {
-  const wf = WORKFLOWS[workflowId]
+  const wf = contextFor(workflowId)
   if (!wf) throw new DomainError('WORKFLOW_NOT_FOUND', 'Unknown workflow')
   return wf
 }
@@ -697,12 +697,42 @@ async function persistReconciled(workflowId, next) {
  * id and nothing else -- there is no parameter for a Claim id, a payer
  * reference or a patient, so a browser agent cannot ask about a submission
  * that is not its own. No decision is ever inferred from elapsed time.
+ *
+ * EFFECTIVE vs HISTORICAL (P0-2)
+ *   The Act I receipt is the payer's ORIGINAL decision and its original
+ *   validity window. Act II can extend that window, and once it has, the
+ *   original window is no longer the authorization in force.
+ *
+ *   This route therefore reports the EFFECTIVE authorization -- the validity
+ *   actually in force now -- while preserving the original receipt verbatim
+ *   under `originalAuthorization`. Nothing is overwritten: the historical
+ *   truth and the current truth are both returned, each labelled.
+ *
+ *   `validThrough` is read from durable remediation state, never asserted from
+ *   a transport status, and coverage is recomputed from it against the
+ *   authoritative scheduled service date.
  */
-export async function checkAuthorizationStatus(workflowId) {
-  policyFor(workflowId)
-  const snap = await workflowRef(workflowId).get()
-  if (!snap.exists) throw new DomainError('WORKFLOW_NOT_FOUND', 'Workflow not established')
-  const d = snap.data()
+
+/**
+ * Inclusive date-window containment. Duplicated deliberately rather than
+ * imported from remediation.js: that module imports `transmit` from here, and
+ * a cycle between the submission and remediation layers is a worse trade than
+ * one three-line pure comparison. Both sides are covered by the same tests.
+ *
+ * ponytail: ISO yyyy-mm-dd strings compare correctly lexicographically.
+ */
+function coversDate(validThrough, scheduledServiceDate) {
+  if (!validThrough || !scheduledServiceDate) return null
+  return String(scheduledServiceDate).slice(0, 10) <= String(validThrough).slice(0, 10)
+}
+
+/**
+ * Pure projection of the authorization status from a persisted workflow
+ * document. Exported so the effective-vs-historical rules can be proven
+ * without Firestore -- the P0-2 invariant is about which fields are reported,
+ * not about storage.
+ */
+export function projectAuthorizationStatus(workflowId, d, scheduledServiceDate = null) {
   const s = d.submission
 
   if (!s) {
@@ -717,6 +747,19 @@ export async function checkAuthorizationStatus(workflowId) {
     }
   }
 
+  const rem = d.remediation
+  const originalPeriod = s.receipt?.preAuthPeriod ?? null
+
+  // The window actually in force. Remediation only ever REPLACES the end date
+  // via a persisted payer response, so its absence means the original stands.
+  const effectiveValidThrough = rem?.currentValidThrough ?? originalPeriod?.end ?? null
+  const effectivePeriod = effectiveValidThrough
+    ? { start: originalPeriod?.start ?? null, end: effectiveValidThrough }
+    : originalPeriod
+
+  const scheduled = scheduledServiceDate ?? rem?.scheduledServiceDate ?? null
+  const covers = coversDate(effectiveValidThrough, scheduled)
+
   return {
     workflowId,
     workflowState: d.state,
@@ -725,8 +768,31 @@ export async function checkAuthorizationStatus(workflowId) {
     payerReference: s.receipt?.payerReference ?? null,
     receiptId: s.receipt?.receiptId ?? null,
     disposition: s.receipt?.disposition ?? null,
-    // Present for Act II; Gate 3 reports it verbatim and acts on nothing.
-    authorizationPeriod: s.receipt?.preAuthPeriod ?? null,
+
+    // --- effective authorization (what is in force NOW) ------------------
+    authorizationPeriod: effectivePeriod,
+    validThrough: effectiveValidThrough,
+    scheduledServiceDate: scheduled,
+    coversScheduledServiceDate: covers,
+    // Administrative readiness is exactly "the authorization in force covers
+    // the scheduled service". It is never a clinical determination.
+    administrativeReadiness: covers === true ? 'ready' : covers === false ? 'blocked' : 'unknown',
+    authorizationExtended: Boolean(rem?.currentValidThrough
+      && originalPeriod?.end
+      && rem.currentValidThrough !== originalPeriod.end),
+    remediationState: rem?.state ?? null,
+    extensionReceiptId: rem?.submission?.extensionReceiptId ?? null,
+
+    // --- historical truth, preserved verbatim ----------------------------
+    // The original payer decision is NOT overwritten by an extension.
+    originalAuthorization: {
+      payerReference: s.receipt?.payerReference ?? null,
+      receiptId: s.receipt?.receiptId ?? null,
+      disposition: s.receipt?.disposition ?? null,
+      authorizationPeriod: originalPeriod,
+      decidedAt: s.receipt?.receivedAt ?? s.completedAt ?? null,
+    },
+
     effectiveAt: s.receipt?.receivedAt ?? s.completedAt ?? s.startedAt,
     claimIdentifier: s.claimIdentifier,
     attempts: s.attempts,
@@ -736,6 +802,13 @@ export async function checkAuthorizationStatus(workflowId) {
     simulated: true,
     simulationNotice: 'Destination is a simulated payer. No real payer was contacted.',
   }
+}
+
+export async function checkAuthorizationStatus(workflowId, { scheduledServiceDate } = {}) {
+  policyFor(workflowId)
+  const snap = await workflowRef(workflowId).get()
+  if (!snap.exists) throw new DomainError('WORKFLOW_NOT_FOUND', 'Workflow not established')
+  return projectAuthorizationStatus(workflowId, snap.data(), scheduledServiceDate ?? null)
 }
 
 /** Attempt ledger for one workflow -- used by the suite to count transmissions. */

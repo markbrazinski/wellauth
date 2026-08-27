@@ -19,8 +19,8 @@ import { randomUUID } from 'node:crypto'
 import { FieldValue } from '@google-cloud/firestore'
 import * as fhir from './fhir.js'
 import { FhirError } from './fhir.js'
-import { REQUIREMENTS, REQUIREMENTS_BY_ID, WORKFLOWS } from './policy.js'
-import { DomainError, effectiveOf, findEvidence, titleOf } from './service.js'
+import { REQUIREMENTS, REQUIREMENTS_BY_ID, contextFor } from './policy.js'
+import { DomainError, dateKindOf, effectiveOf, findEvidence, titleOf } from './service.js'
 import { packetHash } from './canonical.js'
 import {
   bindingRef,
@@ -80,7 +80,7 @@ export const APPROVER_ROLES = ['prior-auth-coordinator', 'clinician', 'superviso
 
 
 function policyFor(workflowId) {
-  const wf = WORKFLOWS[workflowId]
+  const wf = contextFor(workflowId)
   if (!wf) throw new DomainError('WORKFLOW_NOT_FOUND', 'Unknown workflow')
   return wf
 }
@@ -272,6 +272,9 @@ export async function getWorkflow(workflowId) {
           // projection -- the rest of the receipt deliberately does not.
           authorizationPeriod: d.submission.receipt?.preAuthPeriod ?? null,
           payerReference: d.submission.receipt?.payerReference ?? null,
+          // P2-2: the durable time the PAYER answered, so the Activity rail can
+          // stamp the payer event from recorded truth instead of guessing.
+          receivedAt: d.submission.receipt?.receivedAt ?? null,
           simulated: true,
         }
       : null,
@@ -289,6 +292,7 @@ export async function getWorkflow(workflowId) {
         bindingRule: b.bindingRule,
         title: b.title ?? null,
         effectiveDate: b.effectiveDate ?? null,
+        dateKind: b.dateKind ?? null,
         boundAt: b.boundAt,
         boundAtRevision: b.boundAtRevision,
       })),
@@ -498,6 +502,10 @@ export async function attachEvidence(workflowId, { requirementId, evidenceHandle
       // version-aware policy re-check.
       title: titleOf(resource),
       effectiveDate: effectiveOf(resource),
+      // P1-3: WHAT that date is. A Coverage/PractitionerRole period start is
+      // administrative, not clinical, and must not be rendered as if it were
+      // the date the evidence was authored.
+      dateKind: dateKindOf(resource),
       boundAt: nowIso(),
       boundAtRevision: revision,
     })
@@ -584,7 +592,7 @@ async function verifyFreshness(workflowId, d, bindings) {
   if (coverage.versionId !== d.coverage.versionId) {
     stale.push({ what: 'coverage', expected: d.coverage.versionId, actual: coverage.versionId })
   }
-  if (!satisfiesPolicy(REQUIREMENTS_BY_ID['req-005'], coverage.resource, WORKFLOWS[workflowId])) {
+  if (!satisfiesPolicy(REQUIREMENTS_BY_ID['req-005'], coverage.resource, contextFor(workflowId))) {
     stale.push({ what: 'coverage', reason: 'ineligible' })
   }
 
@@ -599,7 +607,7 @@ async function verifyFreshness(workflowId, d, bindings) {
       })
       continue
     }
-    if (!satisfiesPolicy(req, cur.resource, WORKFLOWS[workflowId])) {
+    if (!satisfiesPolicy(req, cur.resource, contextFor(workflowId))) {
       stale.push({ what: 'evidence', requirementId: b.requirementId, reason: 'ineligible' })
       continue
     }

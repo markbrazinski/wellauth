@@ -30,14 +30,14 @@ import { DomainError } from './service.js'
 import { packetHash } from './canonical.js'
 import { firestore, workflowRef } from './store.js'
 import { transmit } from './submission.js'
-import { WORKFLOWS } from './policy.js'
+import { contextFor } from './policy.js'
 import * as fixture from './fixture.js'
 
 const nowIso = () => new Date().toISOString()
 
 /** Same bounded workflow lookup used by workflow.js / submission.js. */
 function policyFor(workflowId) {
-  const wf = WORKFLOWS[workflowId]
+  const wf = contextFor(workflowId)
   if (!wf) throw new DomainError('WORKFLOW_NOT_FOUND', 'Unknown workflow')
   return wf
 }

@@ -723,9 +723,28 @@ check('P0.17 status route takes exactly one path parameter and no query',
   /\/workflows\\\/\(\[\^\/\]\+\)\\\/authorization-status\$/
     .test(readFileSync('provider/index.js', 'utf8')) &&
   /const url = req\.url\.split\('\?'\)\[0\]/.test(readFileSync('provider/index.js', 'utf8')))
-check('P0.17 checkAuthorizationStatus takes only a workflow id',
-  /export async function checkAuthorizationStatus\(workflowId\)/.test(
-    readFileSync('provider/submission.js', 'utf8')))
+// The invariant is that a CALLER cannot steer this lookup -- not that the
+// function has exactly one parameter. P0-2 added a second argument carrying
+// the scheduled service date, which is CLINICAL truth read from FHIR by the
+// route (scheduledDateFor), never anything the caller supplies. These checks
+// assert that provenance directly.
+{
+  const subSrc = readFileSync('provider/submission.js', 'utf8')
+  const idxSrc = readFileSync('provider/index.js', 'utf8')
+  check('P0.17 checkAuthorizationStatus is addressed only by workflow id',
+    /export async function checkAuthorizationStatus\(workflowId, \{ scheduledServiceDate \} = \{\}\)/
+      .test(subSrc))
+  // The status route's only inputs are the path id and a FHIR-derived date.
+  check('P0.17 the status route derives its date from FHIR, not the caller',
+    /authorization-status\$\/,\s*\n\s*async \(m\) => submission\.checkAuthorizationStatus\(m\[1\], \{\s*\n\s*scheduledServiceDate: await scheduledDateFor\(m\[1\]\)/
+      .test(idxSrc))
+  check('P0.17 scheduledDateFor reads the order, never a request body',
+    /async function scheduledDateFor\(workflowId\) \{\s*\n\s*const order = await service\.getOrder\(workflowId\)/
+      .test(idxSrc))
+  // No GET handler is ever handed a body or query string.
+  check('P0.17 GET handlers receive only the matched path parameters',
+    /return runHandler\(\(\) => handler\(m\), url, correlationId, send\)/.test(idxSrc))
+}
 // A caller must not be able to steer the lookup with a payer-supplied id.
 if (BASE_URL) {
   const inj = await http('GET', `/workflows/${W}/authorization-status?claim=WA-other-999`)

@@ -18,6 +18,7 @@ import { Firestore } from '@google-cloud/firestore'
 import { packetHash } from './canonical.js'
 import {
   CANONICAL_AUTHORIZATION_REFERENCE,
+  CANONICAL_SESSION_PREFIX,
   CANONICAL_WORKFLOW_ID,
   EXTENDED_VALID_THROUGH,
   INITIAL_VALID_THROUGH,
@@ -273,7 +274,10 @@ function buildResponse(record) {
  * derived value -- this pins the DEMO, it does not special-case correctness.
  */
 function authorizationNumberFor(identifier) {
-  if (identifier.startsWith(`WA-${CANONICAL_WORKFLOW_ID}-`)) {
+  if (
+    identifier.startsWith(`WA-${CANONICAL_WORKFLOW_ID}-`) ||
+    identifier.startsWith(`WA-${CANONICAL_SESSION_PREFIX}`)
+  ) {
     return CANONICAL_AUTHORIZATION_REFERENCE
   }
   return `NS-AUTH-${createHash('sha256')

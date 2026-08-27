@@ -22,10 +22,26 @@ import { Assistant, toolLabel } from './Assistant'
 import { LowerRegion } from './LowerRegion'
 import { Requirements } from './Requirements'
 
+/**
+ * P1-3: dates outside the current authorization year MUST carry their year.
+ *
+ * The audit's ambiguous "Jan 1" was a 2020 provider-credentialing date
+ * rendered with month and day only, which read as this January. Showing the
+ * year whenever it differs from the demo's own year removes the ambiguity
+ * without fabricating or altering any date.
+ */
+const DEMO_YEAR = 2026
+
 const fmtDate = (iso?: string | null) => {
   if (!iso) return '—'
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00Z` : iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(d.getUTCFullYear() === DEMO_YEAR ? {} : { year: 'numeric' }),
+    timeZone: 'UTC',
+  })
 }
 
 const fmtScheduled = (iso?: string | null) => {
@@ -288,6 +304,12 @@ function TopBar() {
             is no list endpoint and no multi-case view (Gap D-1). */}
         <span className="breadcrumb">Worklist / Authorization</span>
       </div>
+      {/* P2-3: one line so a first-time judge knows what this product is.
+          Deliberately operational, not marketing, and it never claims the
+          assistant decides anything. */}
+      <span className="tagline">
+        Assemble, review, and safely submit prior authorization from existing clinical evidence.
+      </span>
       <span className="whoami">A. Reyes · Auth Coordinator</span>
     </div>
   )
