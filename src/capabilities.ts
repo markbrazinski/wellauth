@@ -98,7 +98,19 @@ async function req(
 const post = (path: string, body?: unknown, headers?: Record<string, string>) =>
   req(path, { method: 'POST', body: body ?? {}, headers })
 
-const EMPTY_INPUT = { type: 'object', properties: {}, additionalProperties: false }
+/**
+ * A no-argument input schema.
+ *
+ * This is a FUNCTION, not a shared constant. Seven tools take no arguments,
+ * and a single shared object literal meant seven live registrations handed the
+ * browser the *same* schema object identity. The polyfill serializes each
+ * registration independently so it never noticed, but a native WebMCP
+ * implementation is free to key, cache or de-duplicate page configuration by
+ * schema identity -- and sharing one object across seven tools is exactly the
+ * kind of aliasing that makes a page's declared configuration look malformed
+ * or oversized. Each tool now owns its own schema object.
+ */
+const noInput = () => ({ type: 'object', properties: {}, additionalProperties: false })
 
 /**
  * Every tool this application can expose, keyed by name. Which subset is live
@@ -116,7 +128,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'Return the clinical service order under review — the ordered service, the ' +
       'scheduled date, the payer, and whether prior authorization is required. ' +
       'Read-only: changes nothing.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: true,
     execute: () => req(wf('/order')),
   },
@@ -128,7 +140,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'against the authorization workflow. This advances workflow state and makes ' +
       'the requirements visible on the page. It does not change the medical record ' +
       'and does not contact the payer.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: false,
     execute: () => post(wf('/requirements')),
   },
@@ -221,7 +233,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'evidence and freeze it for human review. Available only when every requirement ' +
       'is satisfied. This does NOT submit: a workforce user must review and approve the ' +
       'exact prepared disclosure before any submission capability exists.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: false,
     execute: (_i, s) => post(wf('/prepare'), { expected_revision: s.revision }),
   },
@@ -233,7 +245,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'capability exists only after a workforce user has explicitly approved the exact ' +
       'prepared disclosure. Sends exactly one request to a clearly labelled SIMULATED ' +
       'payer.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: false,
     execute: (_i, s) => post(wf('/submit'), { expected_revision: s.revision }),
   },
@@ -244,7 +256,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'Return the current authorization status for this workflow, including the ' +
       "simulated payer's decision and whether the authorization covers the scheduled " +
       'service date. Read-only.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: true,
     execute: () => req(wf('/authorization-status')),
   },
@@ -260,7 +272,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'evidence, or the medical intent — and only the administrative validity window is ' +
       'at issue. It does NOT transmit and does NOT approve itself: a workforce user must ' +
       'approve the exact request first.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: false,
     execute: (_i, s) => post(wf('/remediation/resolve'), { expected_revision: s.revision }),
   },
@@ -271,7 +283,7 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
       'Transmit the workforce-approved authorization-window extension to the payer. ' +
       'Available only after explicit human approval of the exact request. Sends exactly ' +
       'one request to the clearly labelled SIMULATED payer and changes no clinical data.',
-    inputSchema: EMPTY_INPUT,
+    inputSchema: noInput(),
     readOnlyHint: false,
     execute: (_i, s) => post(wf('/remediation/submit'), { expected_revision: s.revision }),
   },
