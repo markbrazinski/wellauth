@@ -18,7 +18,7 @@ import {
 } from './capabilities'
 import { setSnapshot, syncTools } from './webmcp'
 import { Activity, buildActivity } from './Activity'
-import { Assistant, toolLabel } from './Assistant'
+import { Assistant } from './Assistant'
 import { LowerRegion } from './LowerRegion'
 import { Requirements } from './Requirements'
 
@@ -109,6 +109,8 @@ export default function App() {
   const [disclosure, setDisclosure] = useState<Disclosure | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Marks the capability that most recently appeared. Drives the Assistant
+  // panel's NEW marker and its plain-language reveal reason.
   const [unlockCue, setUnlockCue] = useState<string | null>(null)
   const prevTools = useRef<string[]>([])
   const refreshRef = useRef<() => void>(() => {})
@@ -136,7 +138,16 @@ export default function App() {
     const hero = gained.find((t) =>
       ['prepare_prior_authorization', 'submit_prior_authorization',
        'resolve_authorization_window', 'submit_authorization_extension'].includes(t))
-    if (hero && prevTools.current.length > 0) setUnlockCue(hero)
+    if (hero && prevTools.current.length > 0) {
+      setUnlockCue(hero)
+    } else {
+      // A capability that is no longer offered can no longer be "new". The
+      // functional form is required: refresh() runs several times per
+      // transition, so reading the cue from an outer closure (or a ref written
+      // during render) sees a stale value and clears the badge immediately.
+      const live = next.availableTools
+      setUnlockCue((cur) => (cur && live.includes(cur) ? cur : null))
+    }
     prevTools.current = next.availableTools
 
     try {
@@ -176,12 +187,6 @@ export default function App() {
     return () => clearInterval(t)
   }, [pending])
 
-  useEffect(() => {
-    if (!unlockCue) return
-    const t = setTimeout(() => setUnlockCue(null), 6000)
-    return () => clearTimeout(t)
-  }, [unlockCue])
-
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true)
     try {
@@ -216,14 +221,13 @@ export default function App() {
   return (
     <div className="page">
       <div className="frame">
-        {unlockCue && (
-          // The one place a raw capability name is acceptable: a transient,
-          // demo-oriented cue that a new WebMCP action just became available.
-          <div className="toast" role="status" data-testid="unlock-cue">
-            <span className="glyph" aria-hidden="true">◆</span>
-            WebMCP action unlocked · {toolLabel(unlockCue)}
-          </div>
-        )}
+        {/* A floating banner used to announce a new capability here. It is
+            gone deliberately: the Assistant panel now carries the NEW marker
+            and a durable plain-language reveal reason, attached to the exact
+            capability it explains. A banner on top of that was redundant, and
+            in the dense review states it could only be placed by covering
+            something the beat asks the viewer to read. The announcement is
+            still made -- in the one place that owns capabilities. */}
 
         <div className="shell">
           <TopBar />

@@ -115,6 +115,43 @@ async function assertInventoryMatches(p, label) {
   return browser
 }
 
+/** The capability rows as the judge sees them: label + visual tier. */
+const capRows = (p) => p.evaluate(() =>
+  [...document.querySelectorAll('span[data-testid^=cap-]')].map((e) => ({
+    name: e.getAttribute('data-testid').replace('cap-', ''),
+    tier: e.getAttribute('data-tier'),
+  })))
+
+/** The plain-language reveal reason shown under a freshly revealed capability. */
+const revealReason = (p, name) => p.evaluate((n) =>
+  document.querySelector(`[data-testid=reveal-${n}]`)?.textContent?.trim() ?? null, name)
+
+/** The human-gate note, if the assistant is currently blocked. */
+const gateNote = (p) => p.evaluate(() => {
+  const b = document.querySelector('[data-testid=blocked-note]')
+  return b ? b.innerText.replace(/\s+/g, ' ').trim() : null
+})
+
+/**
+ * The capability-reveal contract, asserted at a canonical reveal:
+ * the named capability carries NEW, and its reason is stated in plain language.
+ */
+async function assertReveal(p, name, expectedReason, label) {
+  const rows = await capRows(p)
+  const row = rows.find((r) => r.name === name)
+  check(`${label} · ${name} is marked NEW`, row?.tier === 'new',
+    `tier=${row?.tier ?? 'absent'}`)
+  const reason = await revealReason(p, name)
+  check(`${label} · reveal reason is shown in plain language`,
+    reason === expectedReason, `\n        got: ${reason}\n        want: ${expectedReason}`)
+  // Read-only capabilities stay subdued so the revealed one actually reads as new.
+  const ro = rows.filter((r) => ['get_order_context', 'find_supporting_evidence',
+    'inspect_evidence', 'check_authorization_status'].includes(r.name))
+  check(`${label} · read-only capabilities are subdued`,
+    ro.length > 0 && ro.every((r) => r.tier === 'readonly'),
+    JSON.stringify(ro))
+}
+
 /** Wait until the server reports the expected state before asserting on it. */
 async function waitForState(p, predicate, budgetMs = 8000) {
   let snap = await snapshot(p)
@@ -231,6 +268,18 @@ async function main() {
     !preparedTools.includes('submit_prior_authorization'), preparedTools.join(','))
   check('J6 the proposed disclosure is shown for review',
     (await page.locator('[data-testid=disclosure-items]').count()) === 1)
+
+  // The human gate must SAY it is a human gate, and must not draw a disabled
+  // submit capability -- the capability does not exist yet.
+  const gate1 = await gateNote(page)
+  check('J6 the gate states "Awaiting human approval"',
+    /Awaiting human approval/i.test(gate1 ?? ''), String(gate1))
+  check('J6 the gate states "No submission action available"',
+    /No submission action available/i.test(gate1 ?? ''), String(gate1))
+  const gate1Rows = await capRows(page)
+  check('J6 no submit capability is rendered at all, disabled or otherwise',
+    !gate1Rows.some((r) => r.name === 'submit_prior_authorization'),
+    JSON.stringify(gate1Rows.map((r) => r.name)))
   trace.push(['PREPARED_AWAITING_APPROVAL', preparedTools])
 
   // A refusal proof: the capability is genuinely absent, not merely hidden.
@@ -248,6 +297,8 @@ async function main() {
   const approvedTools = await assertInventoryMatches(page, 'J7 APPROVED')
   check('J7 submit_prior_authorization appeared without a reload',
     approvedTools.includes('submit_prior_authorization'), approvedTools.join(','))
+  await assertReveal(page, 'submit_prior_authorization',
+    'Available because you approved the exact submission.', 'J7 REVEAL 1')
   trace.push(['APPROVED', approvedTools])
 
   // =======================================================================
@@ -274,6 +325,9 @@ async function main() {
   const gapTools = await assertInventoryMatches(page, 'J9 PAYER_APPROVED_COVERAGE_GAP')
   check('J9 resolve_authorization_window appeared from EXTERNAL payer state',
     gapTools.includes('resolve_authorization_window'), gapTools.join(','))
+  await assertReveal(page, 'resolve_authorization_window',
+    "Available because the payer's authorization ends before the scheduled service.",
+    'J9 REVEAL 2')
   trace.push(['PAYER_APPROVED_COVERAGE_GAP', gapTools])
 
   // =======================================================================
@@ -285,6 +339,15 @@ async function main() {
   const remPrepTools = await assertInventoryMatches(page, 'J10 REMEDIATION_PREPARED')
   check('J10 the agent has NO extension-submission capability yet',
     !remPrepTools.includes('submit_authorization_extension'), remPrepTools.join(','))
+  const gate2 = await gateNote(page)
+  check('J10 the second gate states "Awaiting human approval"',
+    /Awaiting human approval/i.test(gate2 ?? ''), String(gate2))
+  check('J10 the second gate states "No submission action available"',
+    /No submission action available/i.test(gate2 ?? ''), String(gate2))
+  const gate2Rows = await capRows(page)
+  check('J10 no extension-submit capability is rendered, disabled or otherwise',
+    !gate2Rows.some((r) => r.name === 'submit_authorization_extension'),
+    JSON.stringify(gate2Rows.map((r) => r.name)))
   trace.push(['REMEDIATION_PREPARED', remPrepTools])
 
   // =======================================================================
@@ -306,6 +369,8 @@ async function main() {
   const remApprTools = await assertInventoryMatches(page, 'J11 REMEDIATION_APPROVED')
   check('J11 submit_authorization_extension appeared with NO reload',
     remApprTools.includes('submit_authorization_extension'), remApprTools.join(','))
+  await assertReveal(page, 'submit_authorization_extension',
+    'Available because you approved the exact extension.', 'J11 REVEAL 3')
   trace.push(['REMEDIATION_APPROVED', remApprTools])
 
   // =======================================================================
@@ -351,6 +416,17 @@ async function main() {
   check('J13 the page shows the MRI as covered',
     /covered/i.test(await text(page, '[data-testid=final-coverage]') ?? ''),
     await text(page, '[data-testid=final-coverage]'))
+  // After submission, mutating capabilities are gone -- only read-only remain.
+  const finalRows = await capRows(page)
+  check('J13 all mutating capabilities have disappeared',
+    finalRows.every((r) => r.tier === 'readonly'), JSON.stringify(finalRows))
+
+  // No protocol vocabulary anywhere in the product surface.
+  const bodyText = await page.evaluate(() => document.body.innerText)
+  check('J13 no "WebMCP" language appears in the product UI',
+    !/WebMCP/i.test(bodyText),
+    (bodyText.match(/.{0,40}WebMCP.{0,40}/i) ?? [''])[0])
+
   check('J13 the page shows administrative readiness Ready',
     /ready/i.test(await text(page, '[data-testid=final-readiness]') ?? ''),
     await text(page, '[data-testid=final-readiness]'))

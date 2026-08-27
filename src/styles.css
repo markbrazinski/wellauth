@@ -71,12 +71,6 @@ body {
 
 @keyframes rowIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 @keyframes softIn { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
-/* Centred (see .toast), so the -50% X offset is part of every keyframe. */
-@keyframes toastIn {
-  0% { opacity: 0; transform: translate(-50%, 8px); }
-  10%, 90% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, 4px); }
-}
 @keyframes pulseDot { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
 @keyframes barSlide { 0% { left: -38%; } 100% { left: 100%; } }
 @keyframes chipPop { 0% { opacity: 0; transform: scale(.9); } 60% { transform: scale(1.03); } 100% { opacity: 1; transform: scale(1); } }
@@ -392,11 +386,36 @@ body {
   border-radius: 50%;
   background: oklch(0.78 0.02 245);
 }
-.action.fresh {
+/* --- capability tiers (design delta) -----------------------------------
+   Emphasis is carried by WEIGHT and COLOUR only. No tier gains a border, a
+   fill, a hover state or a pointer cursor, because none of them is clickable:
+   the tiers say how IMPORTANT a capability is, never that it is a control. */
+
+/* read-only: the assistant can look, not change. Deliberately recessive. */
+.action.readonly { color: oklch(0.58 0.02 245); }
+.action.readonly::before { background: oklch(0.84 0.015 245); }
+
+/* primary: the emphasized next capability for this state. */
+.action.primary { color: var(--accent-deep); font-weight: 600; }
+.action.primary::before { background: var(--accent); }
+
+/* new: just appeared. Carries the temporary NEW marker. */
+.action.new {
   color: var(--accent-deep);
+  font-weight: 600;
   animation: chipPop .45s both;
 }
-.action.fresh::before { background: var(--accent); }
+.action.new::before { background: var(--accent); }
+
+/* The plain-language reason a capability became available. Indented under the
+   capability it explains, and clearly secondary to it. */
+.reveal-reason {
+  font: 400 10.5px/1.45 var(--sans);
+  color: oklch(0.5 0.02 245);
+  padding: 2px 0 6px 10px;
+  max-width: 34ch;
+  animation: softIn .45s both;
+}
 .action .badge {
   font: 700 8px/1 var(--mono);
   letter-spacing: .04em;
@@ -414,14 +433,29 @@ body {
   color: var(--muted-2);
   letter-spacing: .02em;
 }
+/* The human gate, stated as a STATE plus its consequence. No disabled submit
+   capability is drawn anywhere -- the capability does not exist yet. */
 .blocked-note {
   margin-top: 10px;
-  font: 500 10.5px/1.45 var(--mono);
-  color: oklch(0.5 0.12 30);
   padding: 9px 11px;
   background: var(--alert-bg);
   border: 1px solid var(--alert-br);
   border-radius: 5px;
+}
+.blocked-head {
+  font: 600 10.5px/1.35 var(--mono);
+  letter-spacing: .03em;
+  color: oklch(0.45 0.13 35);
+}
+.blocked-sub {
+  font: 500 10.5px/1.4 var(--mono);
+  color: oklch(0.5 0.12 30);
+  margin-top: 2px;
+}
+.blocked-detail {
+  font: 400 10px/1.4 var(--sans);
+  color: oklch(0.52 0.06 30);
+  margin-top: 5px;
 }
 
 .activity-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 15px 18px 0; }
@@ -606,31 +640,6 @@ body {
   background: var(--alert-bg); color: var(--alert-fg);
   border: 1px solid var(--alert-br); white-space: nowrap;
 }
-
-/* ---------- toast / unlock cue ---------- */
-
-.toast {
-  position: absolute;
-  /* The unlock cue must obscure nothing the beat asks the viewer to read:
-     not the scheduled date, not the readiness counter, and not the assistant's
-     capability list (which is what actually just changed). Bottom-centre is
-     clear of all three and still lands in the eye path. */
-  bottom: 96px;
-  left: 50%;
-  z-index: 40;
-  animation: toastIn 6s ease both;
-  font: 600 11px/1 var(--mono);
-  letter-spacing: .04em;
-  padding: 11px 16px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  background: oklch(0.3 0.05 250);
-  color: #fff;
-  box-shadow: 0 8px 24px rgba(20, 28, 45, .16);
-}
-.toast .glyph { font-size: 12px; opacity: .85; }
 
 /* ---------- error / loading ---------- */
 

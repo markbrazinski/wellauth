@@ -108,7 +108,7 @@ function PreSubmission({ snap }: Props) {
         {/* An affordance, not a button: preparing is the assistant's action. */}
         {ready && (
           <span className="badge-ready" style={{ marginLeft: 'auto' }}>
-            Assistant action ready · Prepare submission
+            Available to the assistant · Prepare submission
           </span>
         )}
       </div>
@@ -372,7 +372,7 @@ function CoverageGap({ snap, fmtDate }: Props) {
         {canResolve && (
           <div className="gap-action">
             <span className="badge-ready">
-              Assistant action ready · Resolve authorization window
+              Available to the assistant · Resolve authorization window
             </span>
             <span className="gap-action-note">
               WellAuth evaluated the payer result against the scheduled service and exposed a new
