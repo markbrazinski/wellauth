@@ -52,11 +52,28 @@ You should immediately see the authorization workspace: **Cardiac MRI with
 contrast**, scheduled **September 18 at 9:30 AM**, payer **Northstar Health
 Plan**, status **Prior authorization required**.
 
-If a previous visitor left the demo mid-flow, reset it:
+You do **not** need to reset anything, and you cannot be affected by a previous
+visitor. Every browser tab gets its own authorization workflow, so the demo
+always opens at `CONTEXT_READY`.
 
-```sh
-curl -X POST https://wellauth-provider-qxqdngmwjq-uc.a.run.app/demo/reset
-```
+### Judge sessions and reloads
+
+| What you do | What happens |
+| --- | --- |
+| Open the URL | A new session workflow is minted. Always `CONTEXT_READY`. |
+| **Reload** mid-run | **Your run is preserved** — same state, same revision, same evidence. |
+| Open a second tab | A separate judge session, independent of the first. |
+| Someone else opens it | Their run cannot touch yours, and yours cannot touch theirs. |
+
+How it works: the page mints an opaque session workflow id in `sessionStorage`
+(per-tab; survives reload, absent in a new tab) and the server binds it to the
+one canonical synthetic clinical context. The browser supplies an *identity*
+only — it cannot name a state, a patient, or a transition, and the server stays
+the sole authority on workflow state. There is no client state machine.
+
+The token-gated `/demo/reset` still exists for the shared canonical workflow
+(`wf-wellauth-001`) used by the automated suites. It is not needed for judging,
+is **not** a WebMCP tool, and refuses without the operator token.
 
 ### 2. Point a browser agent at the page
 
@@ -186,18 +203,26 @@ and are deliberately never WebMCP tools.
 ## Test evidence
 
 ```sh
-npm test                                                     # 69/69   unit
+npm test                                                     # 110/110 unit
 npm run test:gate2                                           # 147/147 workflow
-PAYER_BASE_URL=<payer> npm run test:gate3                    # 188/188 submission
+PAYER_BASE_URL=<payer> npm run test:gate3                    # 191/191 submission
 PAYER_BASE_URL=<payer> npm run test:gate4                    # 99/99   integrated
+npm run test:gate5                                           # 41/41   sessions
 GATE4_BASE_URL=<provider> PAYER_BASE_URL=<payer> \
   npm run test:gate4                                         # 99/99   deployed
 npm run test:browser                                         # 12/12   real browser
+node browser-journey.mjs <provider>                          # 90/90   full journey
 ```
 
-The browser suite drives the deployed app in Chromium and asserts that the
-inventory matches the server, that a tool call visibly changes the page, that
-capabilities change without a reload, and that a reload reconstructs both.
+`test:gate5` proves judge-session determinism and read-only non-mutation: a
+fresh session starts at `CONTEXT_READY`, sessions are isolated, a reload
+preserves state byte-for-byte, and every read-only tool leaves state, revision,
+bindings, approvals and payer posture unchanged.
+
+`browser-journey.mjs` drives the **complete Act I + Act II journey** in a real
+anonymous browser with no reload, asserting after every capability transition
+that the browser's own WebMCP inventory equals `snapshot.availableTools` — plus
+both human gates, exactly-once submission, and final cross-surface agreement.
 
 ---
 
@@ -223,14 +248,20 @@ standardized Da Vinci PAS extension operation.
 
 ## Reset
 
+Judges never need this: every tab is already a clean session (see *Judge
+sessions and reloads*). It exists for the shared canonical workflow the
+automated suites target.
+
 ```sh
-curl -X POST <provider>/demo/reset
+curl -X POST <provider>/demo/reset -H "X-WellAuth-Demo-Token: $WELLAUTH_DEMO_RESET_TOKEN"
 ```
 
 Restores the canonical initial state: purges the Firestore workflow, recreates
 it at `CONTEXT_READY`, and clears the payer's record for the prior claim
 identifier so a fresh decision is minted. It is gated behind
-`WELLAUTH_DEMO_RESET` and is **not** a WebMCP tool.
+`WELLAUTH_DEMO_RESET`, **fails closed** without `WELLAUTH_DEMO_RESET_TOKEN`
+(the provider is publicly invokable so a judge can open it), and is **not** a
+WebMCP tool.
 
 To restore the FHIR fixture (write-capable credentials, never the provider
 identity):

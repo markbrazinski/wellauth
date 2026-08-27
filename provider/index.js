@@ -416,8 +416,13 @@ const server = createServer(async (req, res) => {
     if (process.env.WELLAUTH_DEMO_RESET !== 'true') {
       return send(404, { code: 'ROUTE_NOT_FOUND', message: 'No such endpoint', correlationId })
     }
+    // FAIL CLOSED. An unset token previously skipped this check entirely,
+    // which was tolerable only while the service was IAM-private. The service
+    // is now publicly invokable so a judge can open it, and a reset endpoint
+    // that anyone on the internet can call is not acceptable: no token
+    // configured means the route refuses, never that it is open.
     const token = process.env.WELLAUTH_DEMO_RESET_TOKEN
-    if (token && req.headers['x-wellauth-demo-token'] !== token) {
+    if (!token || req.headers['x-wellauth-demo-token'] !== token) {
       return send(401, { code: 'DEMO_RESET_UNAUTHORIZED', message: 'Demo reset token required',
         correlationId })
     }

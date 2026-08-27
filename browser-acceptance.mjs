@@ -14,7 +14,22 @@
 import { chromium } from 'playwright'
 
 const URL = process.argv[2] ?? 'https://wellauth-provider-qxqdngmwjq-uc.a.run.app'
-const W = 'wf-wellauth-001'
+
+/**
+ * The page mints its OWN per-judge workflow id (P0-1), so this suite must read
+ * the id the page is actually using. Comparing against a hard-coded
+ * 'wf-wellauth-001' would compare the browser's inventory against a DIFFERENT
+ * workflow's state and pass only by coincidence.
+ */
+const workflowId = (p) => p.evaluate(() =>
+  sessionStorage.getItem('wellauth.session.workflow'))
+
+/** Read state through the page, so it shares the page's origin and session. */
+const serverState = (p) => p.evaluate(async () => {
+  const wid = sessionStorage.getItem('wellauth.session.workflow')
+  const r = await fetch(`/workflows/${wid}/snapshot`, { headers: { Accept: 'application/json' } })
+  return r.json()
+})
 
 let pass = 0, fail = 0
 const check = (name, cond, detail = '') => {
@@ -39,7 +54,9 @@ const rows = (p) => p.evaluate(() =>
   document.querySelectorAll('[data-testid^=req-]').length)
 
 async function main() {
-  await fetch(`${URL}/demo/reset`, { method: 'POST' })
+  // No reset needed: every page load mints a fresh per-judge session that
+  // starts at CONTEXT_READY by construction (P0-1). The token-gated
+  // /demo/reset exists for the shared canonical workflow, not for this suite.
 
   const browser = await chromium.launch()
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } })
@@ -55,7 +72,7 @@ async function main() {
 
   console.log('\nB2  Browser inventory matches the server at CONTEXT_READY')
   const initial = await tools(page)
-  const server = await (await fetch(`${URL}/workflows/${W}/snapshot`)).json()
+  const server = await serverState(page)
   check('B2 browser holds exactly the server-authorized capabilities',
     initial.join(',') === [...server.availableTools].sort().join(','),
     `${initial} vs ${server.availableTools}`)

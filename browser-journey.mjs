@@ -46,8 +46,25 @@ const call = (p, name, args = {}) => p.evaluate(async ([n, a]) => {
 const workflowId = (p) => p.evaluate(() =>
   sessionStorage.getItem('wellauth.session.workflow'))
 
-const snapshot = async (p) =>
-  (await fetch(`${URL}/workflows/${await workflowId(p)}/snapshot`)).json()
+/**
+ * Reads the snapshot THROUGH THE PAGE, not from Node.
+ *
+ * The deployed service is private (Cloud Run IAM), so a bare Node fetch gets
+ * an HTML sign-in page rather than JSON. Fetching from inside the browser
+ * context reuses exactly the credentials the page itself is using -- which is
+ * also the more honest comparison: it comes from the same origin, and the same
+ * session, as the WebMCP inventory it is being compared against.
+ */
+const snapshot = async (p) => {
+  const id = await workflowId(p)
+  const out = await p.evaluate(async (wid) => {
+    const r = await fetch(`/workflows/${wid}/snapshot`, { headers: { Accept: 'application/json' } })
+    const t = await r.text()
+    try { return JSON.parse(t) } catch { return { __nonJson: r.status } }
+  }, id)
+  if (out?.__nonJson) throw new Error(`snapshot returned non-JSON (status ${out.__nonJson})`)
+  return out
+}
 
 const text = (p, sel) => p.evaluate((s) =>
   document.querySelector(s)?.textContent?.trim() ?? null, sel)
@@ -112,7 +129,11 @@ const trace = []
 
 async function main() {
   const browser = await chromium.launch()
-  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } })
+  // A JUDGE, not an operator: a brand-new incognito-equivalent context with no
+  // stored credentials, no cookies and no prior sessionStorage. Everything
+  // below is what an anonymous visitor with only the URL actually gets.
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 } })
+  const page = await context.newPage()
   const errors = []
   const consoleErrors = []
   const failedRequests = []
@@ -354,7 +375,7 @@ async function main() {
 
   // =======================================================================
   section('J15 A NEW tab is a NEW judge, at CONTEXT_READY')
-  const page2 = await browser.newPage({ viewport: { width: 1600, height: 900 } })
+  const page2 = await context.newPage()
   await page2.goto(URL, { waitUntil: 'networkidle' })
   await page2.waitForTimeout(2500)
   const wid2 = await workflowId(page2)
