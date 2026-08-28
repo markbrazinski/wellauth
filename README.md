@@ -231,6 +231,31 @@ The frontend never decides which tools exist. It synchronizes registrations
 from the server's `availableTools`, so the browser's inventory and the backend's
 state cannot drift.
 
+### The eleven tools
+
+| Tool | What it does | Effect |
+|---|---|---|
+| `get_order_context` | Return the ordered service, scheduled date, payer, and whether prior authorization is required | read-only |
+| `discover_coverage_requirements` | Discover the payer's coverage requirements and record them against the workflow | mutates workflow |
+| `find_supporting_evidence` | Search the authorized clinical record for existing evidence that may satisfy one requirement | read-only |
+| `inspect_evidence` | Return the detail of one candidate evidence record by opaque handle | read-only |
+| `attach_evidence` | Attach a reference to an existing authoritative record so it satisfies one requirement | mutates workflow · reversible |
+| `remove_evidence` | Detach the evidence reference currently satisfying one requirement | mutates workflow · reversible |
+| `prepare_prior_authorization` | Assemble the minimum-necessary packet from attached evidence and freeze it for human review | mutates workflow · does not submit |
+| `submit_prior_authorization` | Transmit the human-approved request to the payer | **transmits** · exactly once |
+| `check_authorization_status` | Return the payer decision and whether it covers the scheduled service date | read-only |
+| `resolve_authorization_window` | Prepare a bounded request to align the authorization validity window with the scheduled date | mutates workflow · does not transmit |
+| `submit_authorization_extension` | Transmit the workforce-approved window extension to the payer | **transmits** · exactly once |
+
+No tool alters the source medical record, creates clinical information, or
+approves a submission. `attach_evidence` and `remove_evidence` are workflow
+bookkeeping — they record which existing record supports which requirement.
+Both approvals are workforce-gated HTTP routes, never WebMCP tools.
+
+Agent-facing descriptions and input schemas live in
+[`src/capabilities.ts`](src/capabilities.ts); user-facing labels are mapped in
+[the integration contract](docs/final-ui/INTEGRATION-CONTRACT.md).
+
 ### Capability lifecycle
 
 | State | Browser-visible tools |
