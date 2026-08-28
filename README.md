@@ -1,43 +1,19 @@
 # WellAuth
 
-**A WebMCP-enabled prior-authorization application.**
+WellAuth is a WebMCP-enabled prior-authorization application: a cardiac MRI is
+already ordered and blocked on prior authorization, and a browser agent uses
+WellAuth's state-specific capabilities to discover the payer's five
+requirements, locate existing authoritative evidence in the FHIR record, attach
+it to exact requirements, and prepare the exact proposed disclosure — then
+**stops**, because it has no capability to submit until a human approves.
 
 > The healthcare application exposes exactly the capabilities an agent may use
 > at each workflow state, while authoritative clinical truth, workflow policy,
 > and human submission authority remain outside the model.
 
-**Live demo:** https://wellauth-provider-qxqdngmwjq-uc.a.run.app
+**Live demo:** <https://wellauth-provider-qxqdngmwjq-uc.a.run.app>
 
 ---
-
-## Synthetic data statement
-
-This demonstration uses entirely synthetic health data. Its authorization,
-disclosure, audit, and infrastructure boundaries are designed around a credible
-HIPAA-regulated deployment model, but **no claim of HIPAA compliance is made.**
-
-**Northstar Health Plan is fictional.** Every payer interaction is with a
-clearly labelled **simulated payer** running as a separate service. No real
-payer, payer network, clearinghouse, or X12 transaction is involved.
-
----
-
-## The demo in one paragraph
-
-A cardiac MRI with contrast is already ordered and scheduled for September 18.
-Prior authorization is blocking it. A browser agent uses WellAuth's
-state-specific WebMCP capabilities to discover the payer's five requirements,
-locate existing authoritative evidence in the FHIR record, attach that evidence
-to exact requirements, and prepare the exact proposed disclosure — then
-**stops**, because it has no capability to submit. A workforce user reviews the
-disclosure and clicks **Approve submission**. Only then does
-`submit_prior_authorization` appear in the browser's tool inventory. The agent
-submits exactly one request to the simulated payer, which **approves** it — but
-with a validity window ending September 12, six days before the scheduled MRI.
-WellAuth detects that administrative mismatch and unlocks a new capability,
-**Resolve authorization window**. The same human gate repeats for the extension,
-and the workflow ends at `AUTHORIZATION_ALIGNED` with the MRI covered.
-
 
 Both screenshots below are a real ChatGPT agent, in the **GPT Work App**, driving
 WellAuth through its WebMCP capabilities. The agent panel is on the left; the
@@ -60,84 +36,150 @@ control in WellAuth, and approving it authorizes — it does not transmit.*
 
 ---
 
-## Judge testing instructions
+## How it works
 
-No account. No setup wizard. No terminal steps.
+**Discover.** A cardiac MRI with contrast is already ordered and scheduled.
+The agent reads the order through a bounded capability — it cannot query FHIR
+freely — and discovers the payer's five requirements. WellAuth never changes
+the ordered service or authors clinical facts.
 
-### 1. Open the app
+**Locate and attach.** The agent searches the authorized record for *existing*
+evidence and attaches exact resource versions to exact requirements. Four
+requirements match structured data. The fifth does not, and the agent says so
+rather than inventing it; the evidence is found in a clinical note through a
+different bounded search path. Attachment is workflow bookkeeping — it does not
+touch the medical record and does not disclose anything to the payer.
 
-https://wellauth-provider-qxqdngmwjq-uc.a.run.app
+**Prepare, then stop.** At 5 of 5 the agent prepares the exact proposed
+disclosure and freezes it to a packet hash. It now has **no capability to
+submit**. A workforce user reviews the disclosure and clicks **Approve
+submission** — a human control in the page, never a WebMCP tool, bound
+server-side to that exact revision and hash.
 
-You should immediately see the authorization workspace: **Cardiac MRI with
-contrast**, scheduled **September 18 at 9:30 AM**, payer **Northstar Health
-Plan**, status **Prior authorization required**.
+**Submit and reconcile.** Only after approval does
+`submit_prior_authorization` appear in the browser's tool inventory. The agent
+submits exactly once to a separate, clearly labelled simulated payer. The payer
+approves — but with a validity window ending before the scheduled MRI, so
+WellAuth unlocks **Resolve authorization window**, repeats the same human gate
+for the extension, and ends at `AUTHORIZATION_ALIGNED` with the MRI covered.
 
-You do **not** need to reset anything, and you cannot be affected by a previous
-visitor. Every browser tab gets its own authorization workflow, so the demo
-always opens at `CONTEXT_READY`.
+---
 
-### Judge sessions and reloads
+## Run it
 
-| What you do | What happens |
-| --- | --- |
-| Open the URL | A new session workflow is minted. Always `CONTEXT_READY`. |
-| **Reload** mid-run | **Your run is preserved** — same state, same revision, same evidence. |
-| Open a second tab | A separate judge session, independent of the first. |
-| Someone else opens it | Their run cannot touch yours, and yours cannot touch theirs. |
+**Fastest — the deployed app.** No account, no setup, no terminal:
 
-How it works: the page mints an opaque session workflow id in `sessionStorage`
-(per-tab; survives reload, absent in a new tab) and the server binds it to the
-one canonical synthetic clinical context. The browser supplies an *identity*
-only — it cannot name a state, a patient, or a transition, and the server stays
-the sole authority on workflow state. There is no client state machine.
+<https://wellauth-provider-qxqdngmwjq-uc.a.run.app>
 
-The token-gated `/demo/reset` still exists for the shared canonical workflow
-(`wf-wellauth-001`) used by the automated suites. It is not needed for judging,
-is **not** a WebMCP tool, and refuses without the operator token.
+You should land on the authorization workspace: **Cardiac MRI with contrast**,
+scheduled **September 18, 9:30 AM**, payer **Northstar Health Plan**, status
+**Prior authorization required**.
 
-### 2. Point a browser agent at the page
+Every browser tab mints its own workflow, so you always start clean, a reload
+preserves your run, and you cannot collide with anyone else. Nothing to reset.
 
-Use the **GPT Work App** (the client shown in the screenshots above), ChatGPT
-Desktop's browser/site-tools capability, or a Chrome build with native WebMCP.
-In native Chrome you can watch the tool inventory directly in
-**DevTools → Application → WebMCP**.
+### Point an agent at it
 
-### 3. Canonical prompt
+Use the **GPT Work App** (the client in the screenshots above), ChatGPT
+Desktop's browser/site-tools capability, or a Chrome build with native WebMCP —
+where you can watch the inventory live in **DevTools → Application → WebMCP**.
+The page ships `@mcp-b/webmcp-polyfill`, which defers to a native implementation
+when one is present. Desktop, optimized for **1600 × 900**.
+
+Then give it the goal:
 
 > Get this MRI ready for prior authorization using the evidence already
 > available. Do not create or infer missing clinical evidence, and do not submit
 > anything unless the workflow is complete and a human has approved it. Stop
 > when human approval is required.
 
-Expected: the agent inspects the order, discovers requirements, searches and
-attaches evidence, reaches 4 of 5, locates the fifth through a different
-bounded search path, reaches 5 of 5, prepares the submission — and stops. The
-page changes visibly at every step.
+The agent inspects the order, discovers the five requirements, attaches
+evidence, reaches 4 of 5, locates the fifth through a different bounded search
+path, prepares the submission — and stops. The page changes at every step.
 
-### 4. The human step
+**Then click `Approve submission`.** `submit_prior_authorization` appears in the
+browser's tool inventory without a reload. That unlock is the whole product. If
+your client needs a nudge to continue: *"Continue now that I have approved the
+submission."*
 
-Click **Approve submission**. Watch `submit_prior_authorization` appear in the
-browser's tool inventory without a reload.
+**Act II.** The simulated payer approves, but the authorization ends September
+12 and the MRI is September 18. A new capability, **Resolve authorization
+window**, appears. Let the agent prepare the extension, click **Approve
+extension request**, and let it submit. The workflow ends with the MRI covered.
 
-If your client needs a new turn to continue:
-
-> Continue now that I have approved the submission.
-
-### 5. Act II
-
-The simulated payer approves, but the authorization ends September 12 and the
-MRI is September 18. A new capability, **Resolve authorization window**,
-appears. Let the agent prepare the extension, click **Approve extension
-request**, and let it submit. The workflow ends with the MRI covered.
-
-### What to try breaking
+### Try to break it
 
 - Ask the agent to submit before you approve — the tool does not exist, and the
-  underlying route refuses with `APPROVAL_REQUIRED`.
+  route underneath refuses with `APPROVAL_REQUIRED`.
 - Ask it to change the ordered service or write a missing diagnosis — no such
   capability exists.
-- Reload at any point — the page and the tool inventory rebuild from the
-  backend.
+- Reload at any point — page and tool inventory rebuild from the backend.
+
+---
+
+## Run locally
+
+Local runs use the **same** Google Cloud FHIR store and Firestore databases as
+the deployed service; there is no offline mode. You need Google Cloud access to
+the project for anything past the unit tests.
+
+### Prerequisites
+
+- Node.js 20+ and npm (verified on Node 25.2.1, npm 11.6.2).
+- For the unit suites only: nothing else.
+- For a running app: `gcloud` with application-default credentials for a
+  principal that can read the `wellauth` Healthcare dataset and read/write the
+  `wellauth-workflow` Firestore database.
+
+```bash
+git clone https://github.com/markbrazinski/wellauth.git
+cd wellauth
+npm install
+```
+
+Unit tests need no cloud access and are the fastest proof the logic is intact:
+
+```bash
+npm test          # 127/127
+```
+
+### Start the stack
+
+Terminal 1 — the provider API (defaults to `:8080`):
+
+```bash
+gcloud auth application-default login
+PAYER_BASE_URL=https://wellauth-payer-simulator-qxqdngmwjq-uc.a.run.app \
+  node provider/index.js
+```
+
+Terminal 2 — the UI, pointed at that provider:
+
+```bash
+VITE_API_BASE=http://localhost:8080 npm run dev
+```
+
+Open <http://localhost:5173>, then drive it exactly as above.
+
+### Expected health checks
+
+```bash
+curl -fsS http://localhost:8080/health
+curl -fsS http://localhost:8080/workflows/wf-wellauth-001/snapshot
+```
+
+`/health` should report `"storeReachable": true` and `"fhirVersion": "4.0.1"`.
+The snapshot returns the canonical workflow's server-authoritative state — the
+UI renders this and never computes state itself.
+
+Environment variables worth knowing: `PORT`, `GCP_PROJECT`, `FHIR_DATASET`,
+`FHIR_STORE`, `FIRESTORE_DATABASE`, `PAYER_BASE_URL`. All have working defaults
+except `PAYER_BASE_URL`, without which submission is disabled.
+
+### Shutdown
+
+Ctrl-C both terminals. Nothing is left running and no local state persists —
+workflow truth lives in Firestore.
 
 ---
 
@@ -211,17 +253,6 @@ and are deliberately never WebMCP tools.
 
 ---
 
-## Browser requirements
-
-- An agent client with WebMCP site-tools support — the **GPT Work App** and
-  ChatGPT Desktop both work — or a browser with native WebMCP
-  (`document.modelContext`).
-- The page ships the `@mcp-b/webmcp-polyfill`, which defers to a native
-  implementation when present.
-- Desktop, optimized for **1600 × 900**.
-
----
-
 ## Test evidence
 
 ```sh
@@ -270,9 +301,8 @@ standardized Da Vinci PAS extension operation.
 
 ## Reset
 
-Judges never need this: every tab is already a clean session (see *Judge
-sessions and reloads*). It exists for the shared canonical workflow the
-automated suites target.
+You never need this: every tab is already a clean session. It exists for the
+shared canonical workflow (`wf-wellauth-001`) the automated suites target.
 
 ```sh
 curl -X POST <provider>/demo/reset -H "X-WellAuth-Demo-Token: $WELLAUTH_DEMO_RESET_TOKEN"
@@ -306,3 +336,41 @@ npm run fhir:seed
 Gate reports: [Gate 0](docs/GATE-0-REPORT.md) ·
 [Gate 2](docs/GATE-2-REPORT.md) · [Gate 3](docs/GATE-3-REPORT.md) ·
 [Gate 4](docs/GATE-4-REPORT.md)
+
+---
+
+## License
+
+Apache-2.0. See [`LICENSE`](LICENSE).
+
+---
+
+## Honest boundaries
+
+**All clinical data is synthetic.** Its authorization, disclosure, audit, and
+infrastructure boundaries are designed around a credible HIPAA-regulated
+deployment model, but **no claim of HIPAA compliance is made**, and no real PHI
+is involved.
+
+**Northstar Health Plan is fictional.** Every payer interaction is with a
+clearly labelled simulated payer running as a separate Cloud Run service with
+its own identity and database. No real payer, payer network, clearinghouse, or
+X12 278 transaction is involved. The Act II authorization-window remediation is
+the canonical workflow of that simulator, not a claim that real payers expose a
+standardized extension transaction.
+
+**WellAuth is not clinical decision support.** It does not diagnose, recommend
+treatment, alter the ordered service, create a diagnosis, or manufacture missing
+evidence. When evidence is absent the correct behavior is to remain incomplete
+and say so — as the first screenshot shows.
+
+**A missing capability is an affordance, not a security boundary.** The agent
+not having `submit_prior_authorization` is an agent-safety signal; the actual
+control is the backend, which independently re-validates state, revision,
+source freshness, and authority on every route. Both human approvals are
+workforce-gated HTTP routes and deliberately never WebMCP tools.
+
+**The demo is not production.** No production authentication, tenancy, SMART on
+FHIR authorization server, or real payer connectivity is included. Local runs
+share the same cloud FHIR store and Firestore databases as the deployed
+service; there is no offline mode.
