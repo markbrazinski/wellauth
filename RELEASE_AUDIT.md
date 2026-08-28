@@ -2,7 +2,8 @@
 
 **Verdict: PASS WITH LIMITATIONS**
 
-Audit run 2026-08-28 against commit `292ffee` (branch `gate-3.5-contract-review`).
+Audit run 2026-08-28 against commit `292ffee`, re-verified the same day against
+commit `d81d59a` (branch `gate-3.5-contract-review`). See *Re-verification* below.
 Scope was release readiness only: no product redesign, no refactor, no
 dependency changes, no history rewrite, no deploy.
 
@@ -133,13 +134,93 @@ gate 3 run — `git checkout -- docs/gate3/outgoing-pas-request.json` clears it.
 
 ## Blockers
 
-None.
+None for repository safety. One blocker for *publication* — see item 2 below:
+nothing verified in this audit is currently visible to a judge.
 
 ## User input still required
 
 1. **Screenshot sets** — keep all three (documented, 4.8 MB), or delete `judge/` and `screenshots/` now that `judge-deployed/` is the cited set.
-2. **Branch** — this work sits on `gate-3.5-contract-review`, unpushed, no upstream. Merging to `main` before publishing is your call.
+2. **Publication state** — the audited work is not published. See *Re-verification* below.
 3. **Availability window** — the README leads with the live URL. Confirm both Cloud Run services stay up through the evaluation period.
+
+---
+
+## Re-verification — 2026-08-28, commit `d81d59a`
+
+Second pass over the same repository, run after two further commits landed
+(`40eec4a` WebMCP self-abort fix, `d81d59a` the first audit). Working tree clean
+at start and at finish.
+
+### Every documented count reproduced
+
+All eight suites were re-run, not carried over. Each matched the README exactly.
+
+| Suite | Result | Environment |
+|---|---|---|
+| `npm test` | **127/127** | local |
+| `npm run test:gate2` | **147/147** | local |
+| `npm run test:gate3` | **191/191** | live payer |
+| `npm run test:gate4` | **99/99** | live payer |
+| `npm run test:gate5` | **41/41** | local |
+| `npm run test:browser` | **12/12** | real Chrome |
+| `node browser-journey.mjs <provider>` | **107/107** | real Chrome → deployed |
+| `npm run build` | clean, 37 modules, 257.90 kB (78.52 kB gzip) | local |
+
+**823 checks, 0 failures.** The bundle size is byte-identical to the documented
+figure. The journey run again re-proved the central thesis from the browser's own
+capability inventory: 5 tools at `PREPARED_AWAITING_APPROVAL` with no submission
+capability, 6 at `APPROVED` once `submit_prior_authorization` is revealed.
+
+### Deployed services
+
+- Provider — HTTP 200, 2.07 s, `<title>WellAuth — Prior Authorization</title>`
+- Payer simulator — HTTP **403** unauthenticated; **200** with an identity token,
+  returning `"marker": "SIMULATED PAYER -- Northstar Health Plan (fictional)"`.
+
+The 403 is Cloud Run IAM, not a broken service: `/health` exists at
+`payer/index.js:154`. The payer being unreachable without provider identity is
+the payer-boundary control working as designed.
+
+### Secret scan — clean, history included
+
+Tracked-tree scan for Google OAuth/API keys, private keys, `sk-`/`xox`/AKIA
+tokens and certificates returned two hits, both the known leak *detector* at
+`provider/smoke.js:123` and the previous audit's description of it. Per-pattern
+scan across **all** history: 0 real hits (the only `BEGIN PRIVATE KEY` matches are
+that same detector regex). No `.env`, credential, `.pem`, `.key` or
+service-account file is tracked. No untracked non-ignored files.
+
+`CLAUDE.md` — the internal operating contract — is correctly untracked and stays
+out of any published tree.
+
+### README integrity
+
+Both embedded proof images and all five linked gate reports resolve on disk.
+
+### Gate 3 artifact churn — confirmed and reverted
+
+As the note below predicted, `npm run test:gate3` rewrote
+`docs/gate3/outgoing-pas-request.json`. The diff was inspected: 7 lines, only
+bundle/claim ids, timestamps and FHIR `versionId`s. The PAS structure Gate 3
+validated is unchanged. Reverted per CLAUDE.md §28.
+
+### New finding — the repository is private and 20 commits stale
+
+The prior audit recorded the branch as "unpushed, no upstream" and did not check
+the remote. It exists and is materially behind:
+
+- `origin` → `github.com/markbrazinski/wellauth.git`, **visibility: PRIVATE**
+- `origin/main` → `a96afff` *"Ignore CLAUDE.md"*, last pushed **2026-08-26**
+- `HEAD` is **20 commits ahead** of `origin/main`
+
+What is published is the Gate 1 FHIR truth layer — before the product, the
+WebMCP capability lifecycle, the payer boundary, the final UI, the proof images
+and this audit existed. `origin/main` is a clean ancestor of HEAD, so publishing
+is a fast-forward with no divergence to reconcile.
+
+**Nothing in this audit is visible to a judge until the branch is pushed and the
+repository is made public.** Both actions are outside this skill's change limits
+and are left to the user.
 
 ## Final verification commands
 
@@ -158,7 +239,9 @@ npm run build
 
 > **SAFE TO MAKE PUBLIC: YES**
 
-Qualified by the three user decisions above, none of which is a safety issue.
+Re-verified at `d81d59a`. Qualified by the three user decisions above, none of
+which is a safety issue. Note that *safe to publish* is not *published*: the
+repository is currently private and 20 commits behind this tree.
 No secret, credential, real PHI, or private endpoint is present in the tracked
 tree or in Git history. All clinical data is synthetic and every payer
 interaction is a clearly labelled simulator.
