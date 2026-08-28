@@ -39,17 +39,24 @@ WellAuth detects that administrative mismatch and unlocks a new capability,
 and the workflow ends at `AUTHORIZATION_ALIGNED` with the MRI covered.
 
 
-![WellAuth after workforce approval: all five requirements met, and the Submit to payer capability newly revealed to the assistant because a human approved the exact submission](docs/final-ui/judge-deployed/06-approved-submit-unlocked.png)
+Both screenshots below are a real ChatGPT agent, in the **GPT Work App**, driving
+WellAuth through its WebMCP capabilities. The agent panel is on the left; the
+WellAuth page it is operating is on the right.
 
-*All five requirements met and bound to packet `e23c7cb8`. `Submit to payer` has just
-appeared in the assistant's inventory — marked NEW, and labelled "Available because you
-approved the exact submission." Before that approval the capability did not exist.*
+![A ChatGPT agent in the GPT Work App working through the payer checklist in WellAuth: four of five requirements are met from the structured record, and the fifth is honestly marked NO STRUCTURED MATCH rather than being fabricated](docs/final-ui/gpt-work-app/01-agent-four-of-five.png)
 
-![The completed workflow at AUTHORIZATION_ALIGNED: the scheduled MRI is covered, with a full activity timeline of assistant, human and simulated-payer events](docs/final-ui/judge-deployed/10-authorization-aligned.png)
+*The agent was told to satisfy every requirement it could from the structured chart and
+to stop when no more could be. It reached **4 / 5** and stopped. The fifth requirement
+reads `NO STRUCTURED MATCH` — the agent reports what remains instead of manufacturing
+evidence. Its inventory holds evidence tools only: there is no capability to submit.*
 
-*The terminal state. One timeline carries assistant, human and simulated-payer events;
-the authorization basis is unchanged through the payer exchange; the scheduled MRI is
-covered. Every payer event is labelled simulated.*
+![The same agent at five of five: the prepared disclosure is on screen, the assistant panel reads Awaiting human approval / No submission action available, and the Approve submission button waits for a human](docs/final-ui/gpt-work-app/02-agent-blocked-awaiting-approval.png)
+
+*The fifth requirement satisfied from a cardiology consult note found elsewhere in the
+authorized record — **5 / 5**, bound to packet `sha256:527fe5e2c3b…`. The agent states
+plainly: "Nothing has been approved or submitted." The assistant panel reads **Awaiting
+human approval · No submission action available**. `Approve submission` is a human
+control in WellAuth, and approving it authorizes — it does not transmit.*
 
 ---
 
@@ -90,8 +97,9 @@ is **not** a WebMCP tool, and refuses without the operator token.
 
 ### 2. Point a browser agent at the page
 
-Use ChatGPT Desktop's browser/site-tools capability, or a Chrome build with
-native WebMCP. In native Chrome you can watch the tool inventory directly in
+Use the **GPT Work App** (the client shown in the screenshots above), ChatGPT
+Desktop's browser/site-tools capability, or a Chrome build with native WebMCP.
+In native Chrome you can watch the tool inventory directly in
 **DevTools → Application → WebMCP**.
 
 ### 3. Canonical prompt
@@ -205,8 +213,9 @@ and are deliberately never WebMCP tools.
 
 ## Browser requirements
 
-- A browser with WebMCP (`document.modelContext`), or ChatGPT Desktop's
-  browser/site-tools capability.
+- An agent client with WebMCP site-tools support — the **GPT Work App** and
+  ChatGPT Desktop both work — or a browser with native WebMCP
+  (`document.modelContext`).
 - The page ships the `@mcp-b/webmcp-polyfill`, which defers to a native
   implementation when present.
 - Desktop, optimized for **1600 × 900**.

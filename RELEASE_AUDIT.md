@@ -222,6 +222,25 @@ is a fast-forward with no divergence to reconcile.
 repository is made public.** Both actions are outside this skill's change limits
 and are left to the user.
 
+*Update, same day:* `main` was fast-forwarded to this tree and pushed to
+`origin` at the user's instruction (`a96afff..455111e`, 21 commits). Visibility
+was deliberately left **PRIVATE**.
+
+### README images superseded
+
+The two `judge-deployed/` images described above were replaced with
+`docs/final-ui/gpt-work-app/` — a real ChatGPT agent, in the GPT Work App,
+driving WellAuth. This is stronger evidence for the product thesis than a
+scripted browser capture: it shows an actual agent client selecting tools from
+natural-language intent, stopping honestly at 4/5 with `NO STRUCTURED MATCH`,
+and holding no submission capability at 5/5 while the human control waits.
+
+Checked before release: synthetic patient only, payer labelled simulated, no URL
+bar, no tokens, no location or provenance metadata. Downscaled to 1600 px wide
+(4.0/3.6 MB → 1.6/1.8 MB) and re-read at that size to confirm legibility. The
+`judge-deployed/` set is retained and still cited for the Act II states the new
+pair does not cover.
+
 ## Final verification commands
 
 ```sh
