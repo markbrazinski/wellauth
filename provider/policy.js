@@ -72,25 +72,6 @@ export const REQUIREMENTS = [
     allowedCodes: ['34552-0'],
   },
   {
-    id: 'req-003',
-    label: 'Failed or contraindicated conservative therapy',
-    // THE FIFTH BEAT. This fact exists only as a narrative DocumentReference,
-    // not as a discrete Condition/Observation/DiagnosticReport. Satisfying it
-    // requires a different bounded search path than req-001/002/004/005 -- the
-    // difference is structural, not an artificial delay.
-    resourceType: 'DocumentReference',
-    alternatePath: true,
-    search: (ctx) => ({
-      subject: `Patient/${ctx.patientId}`,
-      status: 'current',
-      date: [`ge${ctx.evidenceWindowStart}`, `le${ctx.evidenceWindowEnd}`],
-    }),
-    allowedCodes: ['11488-4'],
-    // Both the real note and the orthopedic decoy are LOINC 11488-4 consult
-    // notes; only the title distinguishes conservative-therapy documentation.
-    titleMatch: /conservative therapy/i,
-  },
-  {
     id: 'req-004',
     label: 'Ordering physician identity / attestation requirement',
     resourceType: 'PractitionerRole',
@@ -108,6 +89,25 @@ export const REQUIREMENTS = [
       beneficiary: `Patient/${ctx.patientId}`,
       status: 'active',
     }),
+  },
+  {
+    id: 'req-003',
+    label: 'Failed or contraindicated conservative therapy',
+    // THE FIFTH BEAT. This fact exists only as a narrative DocumentReference,
+    // not as a discrete Condition/Observation/DiagnosticReport. Satisfying it
+    // requires a different bounded search path than req-001/002/004/005 -- the
+    // difference is structural, not an artificial delay.
+    resourceType: 'DocumentReference',
+    alternatePath: true,
+    search: (ctx) => ({
+      subject: `Patient/${ctx.patientId}`,
+      status: 'current',
+      date: [`ge${ctx.evidenceWindowStart}`, `le${ctx.evidenceWindowEnd}`],
+    }),
+    allowedCodes: ['11488-4'],
+    // Both the real note and the orthopedic decoy are LOINC 11488-4 consult
+    // notes; only the title distinguishes conservative-therapy documentation.
+    titleMatch: /conservative therapy/i,
   },
 ]
 

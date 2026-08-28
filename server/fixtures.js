@@ -12,9 +12,9 @@ export const ORDER_CONTEXT = {
 export const COVERAGE_REQUIREMENTS = [
   { id: 'req-001', label: 'Documented cardiac symptoms within 90 days', evidenceType: 'clinical-note' },
   { id: 'req-002', label: 'Prior echocardiogram result', evidenceType: 'diagnostic-report' },
-  { id: 'req-003', label: 'Failed or contraindicated conservative therapy', evidenceType: 'medication-history' },
   { id: 'req-004', label: 'Ordering physician NPI and attestation', evidenceType: 'practitioner-attestation' },
   { id: 'req-005', label: 'Payer member eligibility active on date of service', evidenceType: 'coverage-record' },
+  { id: 'req-003', label: 'Failed or contraindicated conservative therapy', evidenceType: 'medication-history' },
 ]
 
 export const EVIDENCE_ITEMS = [

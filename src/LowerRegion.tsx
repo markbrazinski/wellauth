@@ -117,9 +117,20 @@ function PreSubmission({ snap }: Props) {
 }
 
 function DisclosureReview({ snap, disclosure, busy, onApproveSubmission }: Props) {
-  const items = disclosure?.items ?? []
   const labelFor = (requirementId: string) =>
     snap.requirements.find((r) => r.id === requirementId)?.label ?? requirementId
+
+  // ponytail: display order only. disclosure.items arrives sorted by
+  // requirementId because that ordering is part of the packet hash
+  // (see provider/canonical.js); presenting it in requirement-set order
+  // must not touch the bytes that were hashed and approved.
+  const order = (requirementId: string) => {
+    const i = snap.requirements.findIndex((r) => r.id === requirementId)
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i
+  }
+  const items = [...(disclosure?.items ?? [])].sort(
+    (a, z) => order(a.requirementId) - order(z.requirementId),
+  )
 
   return (
     <div className="lower">
