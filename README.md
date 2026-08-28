@@ -38,6 +38,19 @@ WellAuth detects that administrative mismatch and unlocks a new capability,
 **Resolve authorization window**. The same human gate repeats for the extension,
 and the workflow ends at `AUTHORIZATION_ALIGNED` with the MRI covered.
 
+
+![WellAuth after workforce approval: all five requirements met, and the Submit to payer capability newly revealed to the assistant because a human approved the exact submission](docs/final-ui/judge-deployed/06-approved-submit-unlocked.png)
+
+*All five requirements met and bound to packet `e23c7cb8`. `Submit to payer` has just
+appeared in the assistant's inventory — marked NEW, and labelled "Available because you
+approved the exact submission." Before that approval the capability did not exist.*
+
+![The completed workflow at AUTHORIZATION_ALIGNED: the scheduled MRI is covered, with a full activity timeline of assistant, human and simulated-payer events](docs/final-ui/judge-deployed/10-authorization-aligned.png)
+
+*The terminal state. One timeline carries assistant, human and simulated-payer events;
+the authorization basis is unchanged through the payer exchange; the scheduled MRI is
+covered. Every payer event is labelled simulated.*
+
 ---
 
 ## Judge testing instructions
@@ -203,7 +216,7 @@ and are deliberately never WebMCP tools.
 ## Test evidence
 
 ```sh
-npm test                                                     # 110/110 unit
+npm test                                                     # 127/127 unit
 npm run test:gate2                                           # 147/147 workflow
 PAYER_BASE_URL=<payer> npm run test:gate3                    # 191/191 submission
 PAYER_BASE_URL=<payer> npm run test:gate4                    # 99/99   integrated
@@ -211,7 +224,7 @@ npm run test:gate5                                           # 41/41   sessions
 GATE4_BASE_URL=<provider> PAYER_BASE_URL=<payer> \
   npm run test:gate4                                         # 99/99   deployed
 npm run test:browser                                         # 12/12   real browser
-node browser-journey.mjs <provider>                          # 90/90   full journey
+node browser-journey.mjs <provider>                          # 107/107 full journey
 ```
 
 `test:gate5` proves judge-session determinism and read-only non-mutation: a
@@ -279,7 +292,7 @@ npm run fhir:seed
 | `provider/` | Bounded domain API, workflow, submission, remediation, capabilities |
 | `payer/` | Simulated payer: `Claim/$submit`, `authorization-extension` |
 | `src/` | Authorization workspace + WebMCP registration |
-| `docs/` | Gate reports and validation records |
+| `docs/` | Gate reports, validation records, [screenshot sets](docs/final-ui/IMAGES.md) |
 
 Gate reports: [Gate 0](docs/GATE-0-REPORT.md) ·
 [Gate 2](docs/GATE-2-REPORT.md) · [Gate 3](docs/GATE-3-REPORT.md) ·
