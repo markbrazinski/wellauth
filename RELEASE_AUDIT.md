@@ -1,5 +1,13 @@
 # Release audit — WellAuth
 
+> **Historical audit note — current publication state:**
+> This audit was originally performed *before* final repository publication.
+> The repository is **now public and current on `main`**, the root `LICENSE` is
+> Apache-2.0 and GitHub-detected, and every commit described below is pushed.
+> The earlier private/unpublished findings are retained unedited as historical
+> audit context. **For current judge instructions, release state, the live URL
+> and testing guidance, use [`README.md`](README.md).**
+
 **Verdict: PASS WITH LIMITATIONS**
 
 Audit run 2026-08-28 against commit `292ffee`, re-verified the same day against
@@ -134,13 +142,14 @@ gate 3 run — `git checkout -- docs/gate3/outgoing-pas-request.json` clears it.
 
 ## Blockers
 
-None for repository safety. One blocker for *publication* — see item 2 below:
-nothing verified in this audit is currently visible to a judge.
+None for repository safety. One blocker for *publication* was open when this
+audit ran — see item 2 below. **It is now resolved: the repository is public and
+`main` carries this tree.**
 
 ## User input still required
 
 1. **Screenshot sets** — keep all three (documented, 4.8 MB), or delete `judge/` and `screenshots/` now that `judge-deployed/` is the cited set.
-2. **Publication state** — the audited work is not published. See *Re-verification* below.
+2. **Publication state** — ~~the audited work is not published~~ **Resolved:** `main` is pushed and the repository is public. See *Re-verification* below.
 3. **Availability window** — the README leads with the live URL. Confirm both Cloud Run services stay up through the evaluation period.
 
 ---
@@ -206,6 +215,10 @@ validated is unchanged. Reverted per CLAUDE.md §28.
 
 ### New finding — the repository is private and 20 commits stale
 
+> **Historical — resolved.** Both conditions in this finding have since been
+> fixed: `main` was pushed and the repository was made public. The finding is
+> kept as written to preserve the audit trail.
+
 The prior audit recorded the branch as "unpushed, no upstream" and did not check
 the remote. It exists and is materially behind:
 
@@ -224,7 +237,11 @@ and are left to the user.
 
 *Update, same day:* `main` was fast-forwarded to this tree and pushed to
 `origin` at the user's instruction (`a96afff..455111e`, 21 commits). Visibility
-was deliberately left **PRIVATE**.
+was deliberately left **PRIVATE** at that point.
+
+*Final update:* the repository was subsequently made **PUBLIC** at the user's
+instruction, verified anonymously (repo page, raw `README.md` and the embedded
+proof images all return HTTP 200). `main` is in sync with `origin/main`.
 
 ### README images superseded
 
@@ -259,8 +276,9 @@ npm run build
 > **SAFE TO MAKE PUBLIC: YES**
 
 Re-verified at `d81d59a`. Qualified by the three user decisions above, none of
-which is a safety issue. Note that *safe to publish* is not *published*: the
-repository is currently private and 20 commits behind this tree.
+which is a safety issue. *Safe to publish* was not *published* when this line
+was first written; **the repository has since been made public and `main` now
+carries this tree.**
 No secret, credential, real PHI, or private endpoint is present in the tracked
 tree or in Git history. All clinical data is synthetic and every payer
 interaction is a clearly labelled simulator.
